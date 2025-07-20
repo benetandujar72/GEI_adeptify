@@ -74,4 +74,5 @@ export const logDebug = (message: string, meta?: any) => {
   logger.debug(message, meta);
 };
 
+export { logger };
 export default logger; 
