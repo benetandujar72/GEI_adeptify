@@ -15,8 +15,8 @@ COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 COPY vite.config.ts ./
 
-# Instalar dependencias
-RUN npm ci --only=production
+# Instalar todas las dependencias (incluyendo devDependencies para el build)
+RUN npm install
 
 # Copiar código fuente
 COPY . .
@@ -39,10 +39,9 @@ WORKDIR /app
 
 # Copiar archivos de configuración
 COPY --from=base /app/package*.json ./
-COPY --from=base /app/drizzle.config.ts ./
 
 # Instalar solo dependencias de producción
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copiar archivos construidos
 COPY --from=base /app/dist ./dist
