@@ -1,0 +1,206 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+
+// Tipos
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  instituteId?: string;
+  institute?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  photoURL?: string;
+  preferences?: Record<string, any>;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => void;
+  logout: () => Promise<void>;
+  register: (userData: RegisterData) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  clearError: () => void;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  instituteCode?: string;
+}
+
+// Contexto
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Hook personalizado
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+// Provider
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Verificar sesión al cargar
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error d\'inici de sessió');
+      }
+
+      setUser(data.user);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error d\'inici de sessió');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = () => {
+    window.location.href = '/api/auth/google';
+  };
+
+  const logout = async () => {
+    try {
+      setLoading(true);
+
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      setUser(null);
+    } catch (error) {
+      console.error('Error logging out:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (userData: RegisterData) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error de registre');
+      }
+
+      // No establecer el usuario automáticamente, debe hacer login
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error de registre');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al canviar la contrasenya');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error al canviar la contrasenya');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearError = () => {
+    setError(null);
+  };
+
+  const value: AuthContextType = {
+    user,
+    loading,
+    error,
+    login,
+    loginWithGoogle,
+    logout,
+    register,
+    changePassword,
+    clearError,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+} 

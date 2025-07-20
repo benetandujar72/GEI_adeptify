@@ -1,0 +1,51 @@
+# Render configuration for GEI Unified Platform
+# Despliegue automático sin configuración manual
+
+services:
+  # Servicio web principal
+  - type: web
+    name: gei-unified-platform
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gei-postgres
+          property: connectionString
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: main
+
+  # Base de datos PostgreSQL
+  - type: pserv
+    name: gei-postgres
+    env: postgresql
+    plan: starter
+    ipAllowList: []
+    maxConnections: 10
+    autoDeploy: true
+    branch: main
+
+databases:
+  - name: gei-postgres
+    databaseName: gei_unified
+    user: gei_user
+    plan: starter
+    ipAllowList: []
+    autoDeploy: true 
