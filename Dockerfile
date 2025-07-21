@@ -66,4 +66,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Comando de inicio
-CMD ["./start.sh"] 
+CMD ["./scripts/start.sh"] 
