@@ -1,170 +1,33 @@
 import { useState, useCallback } from 'react';
-import { apiService, ApiResponse } from '../services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/apiClient';
 
-interface UseApiState<T> {
-  data: T | null;
-  loading: boolean;
-  error: string | null;
-}
-
-interface UseApiReturn<T> extends UseApiState<T> {
-  execute: (...args: any[]) => Promise<ApiResponse<T> | null>;
-  reset: () => void;
-}
-
-export function useApi<T = any>(
-  apiFunction: (...args: any[]) => Promise<ApiResponse<T>>
-): UseApiReturn<T> {
-  const [state, setState] = useState<UseApiState<T>>({
-    data: null,
-    loading: false,
-    error: null,
-  });
-
-  const execute = useCallback(
-    async (...args: any[]) => {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      try {
-        const response = await apiFunction(...args);
-        
-        if (response.success) {
-          setState({
-            data: response.data || null,
-            loading: false,
-            error: null,
-          });
-        } else {
-          setState({
-            data: null,
-            loading: false,
-            error: response.error || 'Error desconocido',
-          });
-        }
-        
-        return response;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        setState({
-          data: null,
-          loading: false,
-          error: errorMessage,
-        });
-        return null;
-      }
-    },
-    [apiFunction]
-  );
-
-  const reset = useCallback(() => {
-    setState({
-      data: null,
-      loading: false,
-      error: null,
+// API Client
+const apiClient = {
+  get: async (url: string) => {
+    const response = await fetch(`/api${url}`);
+    return response.json();
+  },
+  post: async (url: string, data: any) => {
+    const response = await fetch(`/api${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     });
-  }, []);
-
-  return {
-    ...state,
-    execute,
-    reset,
-  };
-}
-
-// Hooks específicos para diferentes operaciones
-export function useLogin() {
-  return useApi(apiService.login);
-}
-
-export function useRegister() {
-  return useApi(apiService.register);
-}
-
-export function useLogout() {
-  return useApi(apiService.logout);
-}
-
-export function useCheckSession() {
-  return useApi(apiService.checkSession);
-}
-
-export function useDashboardStats() {
-  return useApi(apiService.getDashboardStats);
-}
-
-export function useInstitutes() {
-  return useApi(apiService.getInstitutes);
-}
-
-export function useCreateInstitute() {
-  return useApi(apiService.createInstitute);
-}
-
-export function useUsers() {
-  return useApi(apiService.getUsers);
-}
-
-export function useCreateUser() {
-  return useApi(apiService.createUser);
-}
-
-export function useUpdateUser() {
-  return useApi(apiService.updateUser);
-}
-
-export function useDeleteUser() {
-  return useApi(apiService.deleteUser);
-}
-
-export function useAcademicYears() {
-  return useApi(apiService.getAcademicYears);
-}
-
-export function useCreateAcademicYear() {
-  return useApi(apiService.createAcademicYear);
-}
-
-export function useModules() {
-  return useApi(apiService.getModules);
-}
-
-export function useUpdateModule() {
-  return useApi(apiService.updateModule);
-}
-
-export function useChatMessage() {
-  return useApi(apiService.sendChatMessage);
-}
-
-export function useGenerateContent() {
-  return useApi(apiService.generateContent);
-}
-
-export function useAuditLogs() {
-  return useApi(apiService.getAuditLogs);
-}
-
-export function useSystemConfig() {
-  return useApi(apiService.getSystemConfig);
-}
-
-export function useUpdateSystemConfig() {
-  return useApi(apiService.updateSystemConfig);
-}
-
-export function useUploadFile() {
-  return useApi(apiService.uploadFile);
-}
-
-export function useNotifications() {
-  return useApi(apiService.getNotifications);
-}
-
-export function useMarkNotificationAsRead() {
-  return useApi(apiService.markNotificationAsRead);
-} 
+    return response.json();
+  },
+  put: async (url: string, data: any) => {
+    const response = await fetch(`/api${url}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+  delete: async (url: string) => {
+    const response = await fetch(`/api${url}`, { method: 'DELETE' });
+    return response.json();
+  },
+};
 
 // Survey hooks
 export const useSurveys = () => {
@@ -195,8 +58,10 @@ export const useSurveyResponses = () => {
 };
 
 export const useSurveyAnalytics = () => {
-  return useMutation({
-    mutationFn: (params: any) => apiClient.post('/surveys/analytics', params),
+  return useQuery({
+    queryKey: ['survey-analytics'],
+    queryFn: () => apiClient.get('/surveys/analytics'),
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 
@@ -233,8 +98,8 @@ export const useResourceBookings = () => {
 export const useAnalytics = () => {
   return useQuery({
     queryKey: ['analytics'],
-    queryFn: (params: any) => apiClient.get('/analytics', { params }),
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    queryFn: () => apiClient.get('/analytics'),
+    staleTime: 15 * 60 * 1000, // 15 minutes
   });
 };
 
@@ -254,7 +119,7 @@ export const useExportData = () => {
 export const useEvaluations = () => {
   return useQuery({
     queryKey: ['evaluations'],
-    queryFn: () => apiClient.get('/evaluations'),
+    queryFn: () => apiClient.get('/evaluation'),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -263,7 +128,7 @@ export const useCreateEvaluation = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: any) => apiClient.post('/evaluations', data),
+    mutationFn: (data: any) => apiClient.post('/evaluation', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['evaluations'] });
     },
@@ -275,7 +140,7 @@ export const useUpdateEvaluation = () => {
   
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => 
-      apiClient.put(`/evaluations/${id}`, data),
+      apiClient.put(`/evaluation/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['evaluations'] });
     },
@@ -286,7 +151,7 @@ export const useDeleteEvaluation = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/evaluations/${id}`),
+    mutationFn: (id: string) => apiClient.delete(`/evaluation/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['evaluations'] });
     },
@@ -314,8 +179,10 @@ export const useRegisterAttendance = () => {
 };
 
 export const useAttendanceReport = () => {
-  return useMutation({
-    mutationFn: (params: any) => apiClient.post('/attendance/report', params),
+  return useQuery({
+    queryKey: ['attendance-report'],
+    queryFn: () => apiClient.get('/attendance/report'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
