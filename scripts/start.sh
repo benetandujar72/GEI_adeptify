@@ -60,6 +60,21 @@ echo "✅ Base de datos conectada exitosamente"
 echo "📦 Ejecutando migraciones..."
 npm run db:push
 
+# Verificar que el build existe
+echo "🔍 Verificando archivos de build..."
+if [ ! -f "dist/index.js" ]; then
+    echo "❌ Error: dist/index.js no encontrado"
+    echo "🔧 Intentando rebuild..."
+    npm run build
+    if [ ! -f "dist/index.js" ]; then
+        echo "❌ Error: Build falló. Verificando errores..."
+        ls -la dist/ 2>/dev/null || echo "Directorio dist no existe"
+        exit 1
+    fi
+fi
+
+echo "✅ Build verificado: dist/index.js existe"
+
 # Iniciar la aplicación
 echo "🚀 Iniciando servidor..."
 echo "🌐 La aplicación estará disponible en el puerto $PORT"
