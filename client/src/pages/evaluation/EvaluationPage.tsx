@@ -73,15 +73,15 @@ const EvaluationPage: React.FC = () => {
 
     // Filtro por búsqueda
     if (searchTerm) {
-      filtered = filtered.filter(eval => 
-        eval.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        eval.subject.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(evaluation => 
+        evaluation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        evaluation.subject.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filtro por estado
     if (selectedFilter !== 'all') {
-      filtered = filtered.filter(eval => eval.status === selectedFilter);
+      filtered = filtered.filter(evaluation => evaluation.status === selectedFilter);
     }
 
     setFilteredEvaluations(filtered);
@@ -113,7 +113,7 @@ const EvaluationPage: React.FC = () => {
       const response = await deleteEvaluation.execute(evaluationId);
       if (response?.success) {
         success('Evaluación eliminada', 'La evaluación se ha eliminado correctamente');
-        setEvaluations(prev => prev.filter(eval => eval.id !== evaluationId));
+        setEvaluations(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
       } else {
         error('Error al eliminar evaluación', response?.error || 'Error desconocido');
       }
@@ -155,7 +155,7 @@ const EvaluationPage: React.FC = () => {
     active: evaluations.filter(e => e.status === 'active').length,
     completed: evaluations.filter(e => e.status === 'completed').length,
     averageScore: evaluations.length > 0 
-      ? evaluations.reduce((acc, eval) => acc + eval.averageScore, 0) / evaluations.length 
+      ? evaluations.reduce((acc, evaluation) => acc + evaluation.averageScore, 0) / evaluations.length 
       : 0
   };
 
