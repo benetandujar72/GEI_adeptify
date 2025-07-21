@@ -48,9 +48,9 @@ COPY --from=base /app/dist ./dist
 COPY --from=base /app/client/dist ./client/dist
 COPY --from=base /app/shared ./shared
 
-# Script de inicio que maneja la inicialización automática
-COPY --from=base /app/scripts/start.sh ./start.sh
-RUN chmod +x ./start.sh
+# Copiar todos los scripts necesarios
+COPY --from=base /app/scripts ./scripts
+RUN chmod +x ./scripts/*.sh
 
 # Cambiar propietario de los archivos
 RUN chown -R nextjs:nodejs /app
