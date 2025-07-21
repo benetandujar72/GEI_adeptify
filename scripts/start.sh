@@ -43,6 +43,10 @@ echo "📁 PWD: $(pwd)"
 echo "📦 Node version: $(node --version)"
 echo "📦 NPM version: $(npm --version)"
 
+# Debug de base de datos
+echo "🔍 Ejecutando diagnóstico de base de datos..."
+node scripts/debug-db.js
+
 # Esperar a que la base de datos esté lista con test simple
 echo "⏳ Esperando a que la base de datos esté lista..."
 
