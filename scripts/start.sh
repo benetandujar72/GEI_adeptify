@@ -36,20 +36,17 @@ else
     echo "✅ GEMINI_API_KEY configurada"
 fi
 
-# Esperar a que la base de datos esté lista
+# Mostrar información del entorno
+echo "🌍 NODE_ENV: $NODE_ENV"
+echo "🔌 PORT: $PORT"
+echo "📁 PWD: $(pwd)"
+echo "📦 Node version: $(node --version)"
+echo "📦 NPM version: $(npm --version)"
+
+# Esperar a que la base de datos esté lista con test simple
 echo "⏳ Esperando a que la base de datos esté lista..."
 
-while ! node -e "
-    const postgres = require('postgres');
-    try {
-        const sql = postgres(process.env.DATABASE_URL);
-        sql.end();
-        process.exit(0);
-    } catch (error) {
-        console.log('Base de datos no disponible aún...');
-        process.exit(1);
-    }
-" 2>/dev/null; do
+while ! node scripts/test-db-simple.js 2>/dev/null; do
     echo "⏳ Base de datos no disponible, reintentando en 5 segundos..."
     sleep 5
 done

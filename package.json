@@ -19,6 +19,7 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "verify:db": "node scripts/verify-db.js",
+    "test:db": "node scripts/test-db-simple.js",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",
