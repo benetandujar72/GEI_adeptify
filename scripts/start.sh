@@ -12,6 +12,30 @@ else
     echo "✅ DATABASE_URL configurada"
 fi
 
+if [ -z "$DB_HOST" ]; then
+    echo "⚠️ DB_HOST no configurada"
+else
+    echo "✅ DB_HOST configurada"
+fi
+
+if [ -z "$DB_NAME" ]; then
+    echo "⚠️ DB_NAME no configurada"
+else
+    echo "✅ DB_NAME configurada"
+fi
+
+if [ -z "$DB_USER" ]; then
+    echo "⚠️ DB_USER no configurada"
+else
+    echo "✅ DB_USER configurada"
+fi
+
+if [ -z "$DB_PASSWORD" ]; then
+    echo "⚠️ DB_PASSWORD no configurada"
+else
+    echo "✅ DB_PASSWORD configurada"
+fi
+
 if [ -z "$SESSION_SECRET" ]; then
     echo "⚠️ SESSION_SECRET no configurada"
 else
@@ -43,9 +67,9 @@ echo "📁 PWD: $(pwd)"
 echo "📦 Node version: $(node --version)"
 echo "📦 NPM version: $(npm --version)"
 
-# Debug de base de datos
-echo "🔍 Ejecutando diagnóstico de base de datos..."
-node scripts/debug-db.js
+# Debug de base de datos con variables separadas
+echo "🔍 Ejecutando diagnóstico avanzado de base de datos..."
+node scripts/test-db-advanced.js
 
 # Esperar a que la base de datos esté lista con test simple
 echo "⏳ Esperando a que la base de datos esté lista..."
