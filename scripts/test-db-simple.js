@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 // Script simple para probar conexión a base de datos
+import postgres from 'postgres';
+
 console.log('🔍 Probando conexión simple a la base de datos...');
 
 // Mostrar variables de entorno
@@ -15,9 +17,6 @@ if (!process.env.DATABASE_URL) {
 // Intentar conexión simple con postgres
 try {
     console.log('🔌 Intentando conexión...');
-    
-    // Importar postgres de forma dinámica
-    const postgres = require('postgres');
     
     console.log('✅ Módulo postgres cargado correctamente');
     

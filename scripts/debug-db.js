@@ -1,6 +1,17 @@
 #!/usr/bin/env node
 
 // Script de debug para diagnosticar problemas de base de datos
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { config } from 'dotenv';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+// Cargar variables de entorno
+config();
+
+const execAsync = promisify(exec);
+
 console.log('🔍 DEBUG: Diagnóstico de conexión a base de datos');
 console.log('================================================');
 
@@ -23,7 +34,7 @@ try {
     const url = new URL(dbUrl);
     console.log('  Protocolo:', url.protocol);
     console.log('  Hostname:', url.hostname);
-    console.log('  Puerto:', url.port);
+    console.log('  Puerto:', url.port || '5432 (por defecto)');
     console.log('  Base de datos:', url.pathname.substring(1));
     console.log('  Usuario:', url.username);
     console.log('  Contraseña:', url.password ? '***CONFIGURADA***' : 'NO CONFIGURADA');
@@ -37,7 +48,6 @@ console.log('\n🔌 Probando diferentes métodos de conexión...');
 // Método 1: Conexión directa con postgres
 console.log('\n📋 Método 1: Conexión directa con postgres');
 try {
-    const postgres = require('postgres');
     console.log('  ✅ Módulo postgres cargado');
     
     const sql = postgres(dbUrl, {
@@ -62,12 +72,10 @@ try {
 // Método 2: Conexión con parámetros separados
 console.log('\n📋 Método 2: Conexión con parámetros separados');
 try {
-    const postgres = require('postgres');
-    
     const url = new URL(dbUrl);
     const sql = postgres({
         host: url.hostname,
-        port: parseInt(url.port),
+        port: parseInt(url.port) || 5432,
         database: url.pathname.substring(1),
         username: url.username,
         password: url.password,
@@ -91,14 +99,11 @@ try {
 // Método 3: Verificar si es problema de red
 console.log('\n📋 Método 3: Verificar conectividad de red');
 try {
-    const { exec } = require('child_process');
-    const { promisify } = require('util');
-    const execAsync = promisify(exec);
-    
     const url = new URL(dbUrl);
-    console.log(`  🔍 Probando conectividad a ${url.hostname}:${url.port}`);
+    const port = url.port || 5432;
+    console.log(`  🔍 Probando conectividad a ${url.hostname}:${port}`);
     
-    const { stdout, stderr } = await execAsync(`nc -zv ${url.hostname} ${url.port}`, { timeout: 10000 });
+    const { stdout, stderr } = await execAsync(`nc -zv ${url.hostname} ${port}`, { timeout: 10000 });
     console.log('  ✅ Conectividad exitosa:', stdout);
     
 } catch (error) {
