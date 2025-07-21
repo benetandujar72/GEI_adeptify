@@ -48,6 +48,10 @@ COPY --from=base /app/dist ./dist
 COPY --from=base /app/client/dist ./client/dist
 COPY --from=base /app/shared ./shared
 
+# Script de inicio que maneja la inicialización automática
+COPY --from=base /app/scripts/start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 # Cambiar propietario de los archivos
 RUN chown -R nextjs:nodejs /app
 
@@ -60,10 +64,6 @@ EXPOSE 3000
 # Variables de entorno para Render
 ENV NODE_ENV=production
 ENV PORT=3000
-
-# Script de inicio que maneja la inicialización automática
-COPY --from=base /app/scripts/start.sh ./start.sh
-RUN chmod +x ./start.sh
 
 # Comando de inicio
 CMD ["./start.sh"] 
