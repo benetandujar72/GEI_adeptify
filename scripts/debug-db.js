@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Script de debug para diagnosticar problemas de base de datos
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import postgres from '@neondatabase/serverless';
 import { config } from 'dotenv';
 import { exec } from 'child_process';
