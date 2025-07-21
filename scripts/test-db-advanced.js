@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 // Script avanzado para probar conexión a base de datos con variables separadas
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from '@neondatabase/serverless';
 
 console.log('🔍 Prueba avanzada de conexión a base de datos');
 console.log('==============================================');
