@@ -18,6 +18,7 @@
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest",
     "test:watch": "vitest --watch",
+    "verify:db": "node scripts/verify-db.js",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",

@@ -56,6 +56,10 @@ done
 
 echo "✅ Base de datos conectada exitosamente"
 
+# Verificar estructura y datos de la base de datos
+echo "🔍 Verificando estructura de la base de datos..."
+npm run verify:db
+
 # Ejecutar migraciones
 echo "📦 Ejecutando migraciones..."
 npm run db:push
