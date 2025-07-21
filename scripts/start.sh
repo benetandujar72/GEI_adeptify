@@ -100,24 +100,31 @@ create_initial_super_admin() {
 check_environment() {
     echo "🔍 Verificando variables de entorno..."
     
-    required_vars=(
-        "DATABASE_URL"
-        "SESSION_SECRET"
-        "GOOGLE_CLIENT_ID"
-        "GOOGLE_CLIENT_SECRET"
-        "GEMINI_API_KEY"
-    )
+    # Verificar variables críticas una por una
+    missing_vars=""
     
-    missing_vars=()
+    if [ -z "$DATABASE_URL" ]; then
+        missing_vars="$missing_vars DATABASE_URL"
+    fi
     
-    for var in \"\${required_vars[@]}\"; do
-        if [ -z \"\${!var}\" ]; then
-            missing_vars+=(\"\$var\")
-        fi
-    done
+    if [ -z "$SESSION_SECRET" ]; then
+        missing_vars="$missing_vars SESSION_SECRET"
+    fi
     
-    if [ \${#missing_vars[@]} -ne 0 ]; then
-        echo "❌ Variables de entorno faltantes: \${missing_vars[*]}"
+    if [ -z "$GOOGLE_CLIENT_ID" ]; then
+        missing_vars="$missing_vars GOOGLE_CLIENT_ID"
+    fi
+    
+    if [ -z "$GOOGLE_CLIENT_SECRET" ]; then
+        missing_vars="$missing_vars GOOGLE_CLIENT_SECRET"
+    fi
+    
+    if [ -z "$GEMINI_API_KEY" ]; then
+        missing_vars="$missing_vars GEMINI_API_KEY"
+    fi
+    
+    if [ -n "$missing_vars" ]; then
+        echo "❌ Variables de entorno faltantes:$missing_vars"
         echo "⚠️ Algunas funcionalidades pueden no estar disponibles"
     else
         echo "✅ Todas las variables de entorno críticas están configuradas"
