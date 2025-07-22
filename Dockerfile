@@ -25,6 +25,9 @@ COPY . .
 # Construir la aplicación
 RUN npm run build
 
+# Verificar que el build se completó correctamente
+RUN ls -la dist/ && echo "=== Client build ===" && ls -la client/dist/ || echo "Client dist no existe"
+
 # Imagen de producción
 FROM node:18-alpine AS production
 
@@ -48,6 +51,12 @@ RUN npm ci --only=production=false && npm cache clean --force
 COPY --from=base /app/dist ./dist
 COPY --from=base /app/client/dist ./client/dist
 COPY --from=base /app/shared ./shared
+
+# Verificar que los archivos se copiaron correctamente
+RUN echo "=== Verificando archivos copiados ===" && \
+    ls -la dist/ && \
+    echo "=== Client files ===" && \
+    ls -la client/dist/ || echo "Client dist no existe"
 
 # Copiar todos los scripts necesarios
 COPY --from=base /app/scripts ./scripts
