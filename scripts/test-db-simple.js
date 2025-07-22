@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Script simple para probar conexión a base de datos
-import { postgres } from '@neondatabase/serverless';
+import postgres from '@neondatabase/serverless';
 
 console.log('🔍 Probando conexión simple a la base de datos...');
 

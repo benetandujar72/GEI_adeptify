@@ -22,6 +22,14 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true
 
