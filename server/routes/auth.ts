@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { logger } from '../utils/logger.js';
 import { db } from '../index.js';
-import { users } from '../database/schema.js';
+import { users } from '../../shared/schema.js';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
