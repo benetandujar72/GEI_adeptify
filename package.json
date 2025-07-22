@@ -24,6 +24,8 @@
     "monitor:db": "node scripts/monitor-db-connections.js",
     "debug:startup": "node scripts/debug-startup.js",
     "debug:production": "node scripts/debug-production.js",
+    "db:init": "node scripts/init-database.js",
+    "db:check": "node scripts/check-database.js",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",
