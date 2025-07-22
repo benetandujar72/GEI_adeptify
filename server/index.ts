@@ -74,6 +74,23 @@ app.use(cors({
   credentials: true,
 }));
 
+// Middleware de logging para todas las peticiones
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  
+  logger.info(`🌐 ${req.method} ${req.path} - Iniciando petición`);
+  logger.info(`📋 User-Agent: ${req.headers['user-agent']}`);
+  logger.info(`🌍 IP: ${req.ip || req.connection.remoteAddress}`);
+  
+  // Log de respuesta
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    logger.info(`✅ ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
+  
+  next();
+});
+
 // Middleware de parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -110,7 +127,35 @@ setupPassport(passport);
 
 // Servir archivos estáticos del cliente
 if (process.env.NODE_ENV === 'production') {
+  logger.info('📁 Configurando archivos estáticos para producción...');
+  logger.info(`📂 Ruta de archivos estáticos: ${path.join(__dirname, '../client/dist')}`);
+  
+  // Verificar si el directorio existe
+  const staticPath = path.join(__dirname, '../client/dist');
+  const fs = await import('fs');
+  if (fs.existsSync(staticPath)) {
+    logger.info('✅ Directorio de archivos estáticos encontrado');
+    
+    // Listar archivos en el directorio
+    try {
+      const files = fs.readdirSync(staticPath);
+      logger.info(`📋 Archivos encontrados en dist: ${files.length} archivos`);
+      files.slice(0, 10).forEach(file => {
+        logger.info(`   📄 ${file}`);
+      });
+      if (files.length > 10) {
+        logger.info(`   ... y ${files.length - 10} archivos más`);
+      }
+    } catch (error) {
+      logger.error('❌ Error leyendo directorio de archivos estáticos:', error);
+    }
+  } else {
+    logger.error('❌ Directorio de archivos estáticos NO encontrado');
+    logger.error(`🔍 Buscando en: ${staticPath}`);
+  }
+  
   app.use(express.static(path.join(__dirname, '../client/dist')));
+  logger.info('✅ Middleware de archivos estáticos configurado');
 }
 
 // Health check endpoint
@@ -163,6 +208,56 @@ app.get('/api/health/db', async (req, res) => {
   }
 });
 
+// Endpoint de diagnóstico detallado
+app.get('/api/debug', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    logger.info('🔍 Endpoint de diagnóstico solicitado');
+    
+    const staticPath = path.join(__dirname, '../client/dist');
+    const indexPath = path.join(staticPath, 'index.html');
+    
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      staticPath: staticPath,
+      indexPath: indexPath,
+      staticPathExists: fs.existsSync(staticPath),
+      indexHtmlExists: fs.existsSync(indexPath),
+      currentDir: __dirname,
+      processCwd: process.cwd(),
+      env: {
+        NODE_ENV: process.env.NODE_ENV,
+        PORT: process.env.PORT,
+        CORS_ORIGIN: process.env.CORS_ORIGIN
+      }
+    };
+    
+    // Listar archivos si el directorio existe
+    if (fs.existsSync(staticPath)) {
+      try {
+        const files = fs.readdirSync(staticPath);
+        debugInfo.files = files;
+        debugInfo.fileCount = files.length;
+      } catch (error) {
+        debugInfo.readError = error.message;
+      }
+    }
+    
+    logger.info('📊 Información de diagnóstico:', debugInfo);
+    res.json(debugInfo);
+    
+  } catch (error) {
+    logger.error('❌ Error en endpoint de diagnóstico:', error);
+    res.status(500).json({
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Configuración de rutas API
 app.use('/api', setupRoutes());
 
@@ -172,20 +267,42 @@ setupWebSocket(wss);
 
 // Manejo de rutas del cliente (SPA) - SOLO para rutas que no sean API ni archivos estáticos
 if (process.env.NODE_ENV === 'production') {
+  logger.info('🌐 Configurando rutas SPA para producción...');
+  
   app.get('*', (req, res, next) => {
+    logger.info(`🔍 Petición recibida: ${req.method} ${req.path}`);
+    logger.info(`📋 Headers: ${JSON.stringify(req.headers, null, 2)}`);
+    
     // No interceptar rutas de API
     if (req.path.startsWith('/api/')) {
+      logger.info(`✅ Ruta API detectada, pasando al siguiente middleware: ${req.path}`);
       return next();
     }
     
     // No interceptar archivos estáticos
     if (req.path.includes('.') && !req.path.includes('..')) {
+      logger.info(`✅ Archivo estático detectado, pasando al siguiente middleware: ${req.path}`);
       return next();
     }
     
     // Para todas las demás rutas, servir index.html (SPA)
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+    const indexPath = path.join(__dirname, '../client/dist/index.html');
+    logger.info(`🌐 Sirviendo index.html para ruta SPA: ${req.path}`);
+    logger.info(`📂 Ruta del archivo: ${indexPath}`);
+    
+    // Verificar si el archivo existe
+    const fs = require('fs');
+    if (fs.existsSync(indexPath)) {
+      logger.info('✅ index.html encontrado, enviando archivo');
+      res.sendFile(indexPath);
+    } else {
+      logger.error('❌ index.html NO encontrado');
+      logger.error(`🔍 Buscando en: ${indexPath}`);
+      res.status(404).send('index.html no encontrado');
+    }
   });
+  
+  logger.info('✅ Rutas SPA configuradas');
 }
 
 // Middleware de manejo de errores
