@@ -1,0 +1,44 @@
+const esbuild = require('esbuild');
+
+const externalDependencies = [
+  // Dependencias de Node.js
+  'path', 'fs', 'http', 'https', 'url', 'querystring', 'stream', 'util', 'events', 
+  'buffer', 'process', 'os', 'child_process', 'cluster', 'worker_threads', 
+  'perf_hooks', 'async_hooks', 'timers', 'punycode', 'domain', 'dns', 'dgram', 
+  'tls', 'net', 'tty', 'readline', 'repl', 'vm', 'inspector', 'assert', 
+  'constants', 'crypto', 'zlib', 'http2',
+  
+  // Dependencias de npm que deben ser externas
+  'postgres', 'cors', 'helmet', 'compression', 'winston', 'express', 
+  'express-session', 'passport', 'passport-google-oauth20', 'passport-local', 
+  'bcryptjs', 'jsonwebtoken', 'express-fileupload', 'connect-pg-simple', 
+  'memorystore', 'dotenv',
+  
+  // Dependencias de Drizzle
+  'drizzle-orm', 'drizzle-orm/postgres-js', 'drizzle-orm/neon-serverless',
+  
+  // Dependencias de Google APIs
+  'googleapis',
+  
+  // Dependencias de AI
+  '@anthropic-ai/sdk', '@google/generative-ai', 'openai',
+  
+  // Dependencias de WebSocket
+  'ws',
+  
+  // Dependencias de CSV
+  'csv-parse', 'csv-stringify'
+];
+
+esbuild.build({
+  entryPoints: ['server/index.ts'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  outdir: 'dist',
+  external: externalDependencies,
+  minify: false,
+  sourcemap: false,
+  target: 'node18',
+  logLevel: 'info'
+}).catch(() => process.exit(1)); 

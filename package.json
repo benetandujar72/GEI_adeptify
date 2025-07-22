@@ -9,7 +9,7 @@
     "dev:server": "NODE_ENV=development tsx server/index.ts",
     "dev:client": "vite client",
     "build": "npm run build:server && npm run build:client",
-    "build:server": "esbuild server/index.ts --platform=node --bundle --format=esm --outdir=dist",
+    "build:server": "node esbuild.config.js",
     "build:client": "vite build client",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
