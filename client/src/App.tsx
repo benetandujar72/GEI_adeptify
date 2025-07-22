@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
+import LoadingScreen from './components/LoadingScreen';
+import AppWrapper from './components/AppWrapper';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import Layout from './components/Layout';
@@ -22,7 +24,8 @@ const App: React.FC = () => {
       <AuthProvider>
         <ToastProvider>
           <Router>
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <AppWrapper>
+              <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route
@@ -124,6 +127,7 @@ const App: React.FC = () => {
                 />
               </Routes>
             </div>
+            </AppWrapper>
           </Router>
         </ToastProvider>
       </AuthProvider>

@@ -62,18 +62,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
+      // Timeout de 5 segundos para la verificación de auth
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch('/api/auth/me', {
         credentials: 'include',
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
       } else {
+        console.log('Auth check failed, user not authenticated');
         setUser(null);
       }
     } catch (error) {
-      console.error('Error checking auth:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Auth check timeout, continuing without auth');
+      } else {
+        console.error('Error checking auth:', error);
+      }
       setUser(null);
     } finally {
       setLoading(false);
