@@ -30,6 +30,22 @@ RUN npm ci
 # Copiar código fuente
 COPY . .
 
+# Verificar que los archivos críticos estén presentes
+RUN echo "=== Verificando archivos críticos ===" && \
+    ls -la tsconfig.json && \
+    ls -la esbuild.config.js && \
+    ls -la vite.config.ts && \
+    ls -la tailwind.config.ts && \
+    ls -la postcss.config.js && \
+    ls -la client/postcss.config.js && \
+    ls -la client/tailwind.config.js && \
+    ls -la client/tsconfig.node.json && \
+    ls -la client/tsconfig.json && \
+    ls -la client/vite.config.ts && \
+    ls -la client/index.html && \
+    ls -la server/index.ts && \
+    ls -la client/src/App.tsx
+
 # Construir la aplicación
 RUN npm run build
 

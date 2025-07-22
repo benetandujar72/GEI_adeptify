@@ -81,16 +81,16 @@ async function initializeDatabaseSimple() {
     // 3. Crear módulos
     console.log('📚 Creando módulos...');
     const modulesData = [
-      { name: 'Gestió d\'Avaluacions', code: 'EVAL', description: 'Mòdul per gestionar avaluacions i notes' },
-      { name: 'Control d\'Assistència', code: 'ATT', description: 'Mòdul per controlar l\'assistència dels alumnes' },
-      { name: 'Gestió de Guàrdies', code: 'GUARD', description: 'Mòdul per gestionar les guàrdies dels professors' },
-      { name: 'Enquestes', code: 'SURV', description: 'Mòdul per crear i gestionar enquestes' },
-      { name: 'Recursos', code: 'RES', description: 'Mòdul per gestionar recursos i reserves' },
-      { name: 'Analítiques', code: 'ANAL', description: 'Mòdul per visualitzar analítiques i informes' }
+      { name: 'Gestió d\'Avaluacions', display_name: 'Gestió d\'Avaluacions', description: 'Mòdul per gestionar avaluacions i notes' },
+      { name: 'Control d\'Assistència', display_name: 'Control d\'Assistència', description: 'Mòdul per controlar l\'assistència dels alumnes' },
+      { name: 'Gestió de Guàrdies', display_name: 'Gestió de Guàrdies', description: 'Mòdul per gestionar les guàrdies dels professors' },
+      { name: 'Enquestes', display_name: 'Enquestes', description: 'Mòdul per crear i gestionar enquestes' },
+      { name: 'Recursos', display_name: 'Recursos', description: 'Mòdul per gestionar recursos i reserves' },
+      { name: 'Analítiques', display_name: 'Analítiques', description: 'Mòdul per visualitzar analítiques i informes' }
     ];
 
     const createdModules = await sql`
-      INSERT INTO modules (name, code, description)
+      INSERT INTO modules (name, display_name, description)
       SELECT * FROM json_populate_recordset(null::modules, ${JSON.stringify(modulesData)})
       RETURNING *
     `;
