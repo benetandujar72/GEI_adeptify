@@ -106,6 +106,17 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     version: process.env.npm_package_version || '1.0.0',
+    port: process.env.PORT || 3000,
+    uptime: process.uptime(),
+  });
+});
+
+// Simple health check for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'GEI Unified Platform'
   });
 });
 
