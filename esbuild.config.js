@@ -1,4 +1,4 @@
-const esbuild = require('esbuild');
+import * as esbuild from 'esbuild';
 
 const externalDependencies = [
   // Dependencias de Node.js
