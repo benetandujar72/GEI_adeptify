@@ -79,6 +79,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Configuración de sesiones
+import connectPg from 'connect-pg-simple';
+
+const PostgresStore = connectPg(session);
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-production',
   resave: false,
@@ -90,8 +94,13 @@ app.use(session({
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
   },
   store: process.env.NODE_ENV === 'production' 
-    ? undefined // Usar store de base de datos en producción
-    : undefined, // Usar store en memoria en desarrollo
+    ? new PostgresStore({
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: true,
+        ttl: 24 * 60 * 60, // 24 horas en segundos
+        tableName: 'sessions'
+      })
+    : undefined, // Usar MemoryStore solo en desarrollo
 }));
 
 // Configuración de Passport
