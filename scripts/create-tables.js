@@ -30,35 +30,39 @@ async function createTables() {
     await sql`SELECT 1`;
     console.log('✅ Conexión establecida');
 
-    // SQL para crear las tablas principales
-    const createTablesSQL = `
-      -- Crear ENUMs
-      DO $$ BEGIN
+
+
+    console.log('📋 Creando tablas...');
+    
+    // Ejecutar comandos SQL uno por uno
+    const commands = [
+      // Crear ENUMs
+      `DO $$ BEGIN
         CREATE TYPE user_role AS ENUM ('super_admin', 'institute_admin', 'teacher', 'student', 'parent', 'staff');
       EXCEPTION
         WHEN duplicate_object THEN null;
-      END $$;
-
-      DO $$ BEGIN
+      END $$;`,
+      
+      `DO $$ BEGIN
         CREATE TYPE module_status AS ENUM ('active', 'inactive', 'maintenance');
       EXCEPTION
         WHEN duplicate_object THEN null;
-      END $$;
-
-      DO $$ BEGIN
+      END $$;`,
+      
+      `DO $$ BEGIN
         CREATE TYPE academic_year_status AS ENUM ('active', 'inactive', 'completed');
       EXCEPTION
         WHEN duplicate_object THEN null;
-      END $$;
-
-      DO $$ BEGIN
+      END $$;`,
+      
+      `DO $$ BEGIN
         CREATE TYPE notification_type AS ENUM ('system', 'evaluation', 'attendance', 'guard_duty', 'survey', 'resource', 'analytics', 'general');
       EXCEPTION
         WHEN duplicate_object THEN null;
-      END $$;
-
-      -- Tabla institutes
-      CREATE TABLE IF NOT EXISTS institutes (
+      END $$;`,
+      
+      // Crear tablas
+      `CREATE TABLE IF NOT EXISTS institutes (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
         code TEXT NOT NULL UNIQUE,
@@ -71,10 +75,9 @@ async function createTables() {
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-
-      -- Tabla users
-      CREATE TABLE IF NOT EXISTS users (
+      );`,
+      
+      `CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         institute_id UUID REFERENCES institutes(id) ON DELETE CASCADE,
         email TEXT NOT NULL UNIQUE,
@@ -90,10 +93,9 @@ async function createTables() {
         preferences JSONB DEFAULT '{}',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-
-      -- Tabla academic_years
-      CREATE TABLE IF NOT EXISTS academic_years (
+      );`,
+      
+      `CREATE TABLE IF NOT EXISTS academic_years (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         institute_id UUID NOT NULL REFERENCES institutes(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
@@ -103,10 +105,9 @@ async function createTables() {
         settings JSONB DEFAULT '{}',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-
-      -- Tabla modules
-      CREATE TABLE IF NOT EXISTS modules (
+      );`,
+      
+      `CREATE TABLE IF NOT EXISTS modules (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
         code TEXT NOT NULL UNIQUE,
@@ -115,10 +116,9 @@ async function createTables() {
         settings JSONB DEFAULT '{}',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-
-      -- Tabla institute_modules
-      CREATE TABLE IF NOT EXISTS institute_modules (
+      );`,
+      
+      `CREATE TABLE IF NOT EXISTS institute_modules (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         institute_id UUID NOT NULL REFERENCES institutes(id) ON DELETE CASCADE,
         module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
@@ -127,10 +127,9 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(institute_id, module_id)
-      );
-
-      -- Tabla classes
-      CREATE TABLE IF NOT EXISTS classes (
+      );`,
+      
+      `CREATE TABLE IF NOT EXISTS classes (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         institute_id UUID NOT NULL REFERENCES institutes(id) ON DELETE CASCADE,
         academic_year_id UUID NOT NULL REFERENCES academic_years(id) ON DELETE CASCADE,
@@ -141,10 +140,9 @@ async function createTables() {
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-
-      -- Tabla competencies
-      CREATE TABLE IF NOT EXISTS competencies (
+      );`,
+      
+      `CREATE TABLE IF NOT EXISTS competencies (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         institute_id UUID NOT NULL REFERENCES institutes(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
@@ -153,10 +151,9 @@ async function createTables() {
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-
-      -- Tabla resources
-      CREATE TABLE IF NOT EXISTS resources (
+      );`,
+      
+      `CREATE TABLE IF NOT EXISTS resources (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         institute_id UUID NOT NULL REFERENCES institutes(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
@@ -166,31 +163,21 @@ async function createTables() {
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-    `;
-
-    console.log('📋 Creando tablas...');
-    
-    // Dividir el SQL en comandos individuales
-    const commands = createTablesSQL
-      .split(';')
-      .map(cmd => cmd.trim())
-      .filter(cmd => cmd.length > 0 && !cmd.startsWith('--'));
+      );`
+    ];
 
     console.log(`📊 Ejecutando ${commands.length} comandos SQL...`);
 
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i];
-      if (command.trim()) {
-        try {
-          await sql.unsafe(command);
-          console.log(`  ✅ Comando ${i + 1}/${commands.length} ejecutado`);
-        } catch (error) {
-          if (error.message.includes('already exists') || error.message.includes('duplicate_object')) {
-            console.log(`  ⚠️ Comando ${i + 1}/${commands.length} ya existía`);
-          } else {
-            console.log(`  ❌ Error en comando ${i + 1}/${commands.length}: ${error.message}`);
-          }
+      try {
+        await sql.unsafe(command);
+        console.log(`  ✅ Comando ${i + 1}/${commands.length} ejecutado`);
+      } catch (error) {
+        if (error.message.includes('already exists') || error.message.includes('duplicate_object')) {
+          console.log(`  ⚠️ Comando ${i + 1}/${commands.length} ya existía`);
+        } else {
+          console.log(`  ❌ Error en comando ${i + 1}/${commands.length}: ${error.message}`);
         }
       }
     }
