@@ -41,8 +41,8 @@ WORKDIR /app
 # Copiar archivos de configuración
 COPY --from=base /app/package*.json ./
 
-# Instalar solo dependencias de producción (incluyendo postgres)
-RUN npm ci --only=production && npm cache clean --force
+# Instalar dependencias de producción y desarrollo necesarias para el build
+RUN npm ci --only=production=false && npm cache clean --force
 
 # Copiar archivos construidos
 COPY --from=base /app/dist ./dist
