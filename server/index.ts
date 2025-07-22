@@ -69,7 +69,7 @@ app.use(compression());
 // Configuración de CORS
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
+    ? process.env.CORS_ORIGIN || 'https://gei.adeptify.es'
     : ['http://localhost:3001', 'http://localhost:3000'],
   credentials: true,
 }));
