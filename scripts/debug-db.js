@@ -2,7 +2,7 @@
 
 // Script de debug para diagnosticar problemas de base de datos
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import postgres from '@neondatabase/serverless';
+import { postgres } from '@neondatabase/serverless';
 import { config } from 'dotenv';
 import { exec } from 'child_process';
 import { promisify } from 'util';
