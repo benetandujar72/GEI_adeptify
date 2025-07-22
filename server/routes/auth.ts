@@ -1,16 +1,117 @@
 import { Router } from 'express';
 import { logger } from '../utils/logger.js';
+import { db } from '../index.js';
+import { users } from '../database/schema.js';
+import { eq } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-// Login
-router.post('/login', (req, res) => {
-  res.json({ message: 'Login endpoint' });
+// Login funcional
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password, instituteId } = req.body;
+    
+    logger.info(`🔐 Intento de login: ${username} (instituto: ${instituteId})`);
+    
+    if (!username || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Usuario y contraseña son requeridos' 
+      });
+    }
+    
+    // Buscar usuario por email o username
+    let user = null;
+    if (username.includes('@')) {
+      [user] = await db.select().from(users).where(eq(users.email, username));
+    } else {
+      [user] = await db.select().from(users).where(eq(users.username, username));
+    }
+    
+    if (!user) {
+      logger.warn(`❌ Usuario no encontrado: ${username}`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Credenciales incorrectas' 
+      });
+    }
+    
+    // Verificar contraseña
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isPasswordValid) {
+      logger.warn(`❌ Contraseña incorrecta para usuario: ${username}`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Credenciales incorrectas' 
+      });
+    }
+    
+    // Si es super_admin, no necesita instituteId
+    if (user.role === 'super_admin') {
+      logger.info(`✅ Login exitoso para super admin: ${username}`);
+      return res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          display_name: user.display_name,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          role: user.role,
+          institute_id: user.institute_id
+        }
+      });
+    }
+    
+    // Para otros roles, verificar instituteId
+    if (!instituteId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Selección de instituto requerida' 
+      });
+    }
+    
+    if (user.institute_id && user.institute_id !== parseInt(instituteId)) {
+      logger.warn(`❌ Usuario ${username} no pertenece al instituto ${instituteId}`);
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Usuario no pertenece al instituto seleccionado' 
+      });
+    }
+    
+    logger.info(`✅ Login exitoso: ${username} (instituto: ${instituteId})`);
+    
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role,
+        institute_id: user.institute_id
+      }
+    });
+    
+  } catch (error) {
+    logger.error('❌ Error en login:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error interno del servidor' 
+    });
+  }
 });
 
 // Logout
 router.post('/logout', (req, res) => {
-  res.json({ message: 'Logout endpoint' });
+  logger.info('🚪 Logout solicitado');
+  res.json({ 
+    success: true,
+    message: 'Logout exitoso' 
+  });
 });
 
 // Register
