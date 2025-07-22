@@ -59,8 +59,16 @@ async function diagnoseProduction() {
     buildPaths.forEach(path => {
       const fullPath = join(__dirname, '..', path);
       if (existsSync(fullPath)) {
-        const stats = readFileSync(fullPath, 'utf8').length;
-        console.log(`✅ ${path}: ${stats} bytes`);
+        try {
+          const stats = readFileSync(fullPath, 'utf8').length;
+          console.log(`✅ ${path}: ${stats} bytes`);
+        } catch (error) {
+          if (error.code === 'EISDIR') {
+            console.log(`✅ ${path}: [Directorio]`);
+          } else {
+            console.log(`⚠️ ${path}: Error leyendo archivo - ${error.message}`);
+          }
+        }
       } else {
         console.log(`❌ ${path}: NO EXISTE`);
       }
