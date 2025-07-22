@@ -24,8 +24,10 @@ COPY client/tsconfig.json ./client/
 COPY client/vite.config.ts ./client/
 COPY client/index.html ./client/
 
-# Instalar todas las dependencias (incluyendo devDependencies para el build)
-RUN npm ci
+# Instalar dependencias con configuración optimizada
+RUN npm ci --only=production --ignore-scripts && \
+    npm ci --ignore-scripts && \
+    npm cache clean --force
 
 # Copiar código fuente
 COPY . .
@@ -46,7 +48,7 @@ RUN echo "=== Verificando archivos críticos ===" && \
     ls -la server/index.ts && \
     ls -la client/src/App.tsx
 
-# Construir la aplicación
+# Construir la aplicación con configuración optimizada
 RUN npm run build
 
 # Verificar que el build se completó correctamente
@@ -68,8 +70,9 @@ WORKDIR /app
 # Copiar archivos de configuración
 COPY --from=base /app/package*.json ./
 
-# Instalar dependencias de producción y desarrollo necesarias para el build
-RUN npm ci && npm cache clean --force
+# Instalar solo dependencias de producción
+RUN npm ci --only=production --ignore-scripts && \
+    npm cache clean --force
 
 # Copiar archivos construidos
 COPY --from=base /app/dist ./dist
@@ -106,7 +109,7 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Health check
+# Health check optimizado
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
