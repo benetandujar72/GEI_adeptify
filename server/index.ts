@@ -34,10 +34,15 @@ const port = process.env.PORT || 3000;
 
 // Configuración de base de datos
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
+
+// Configuración de conexión con SSL para Render
 const sql = postgres(databaseUrl, {
   max: 5, // Máximo 5 conexiones en el pool
   idle_timeout: 20, // Cerrar conexiones inactivas después de 20 segundos
   connect_timeout: 10, // Timeout de conexión de 10 segundos
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: false // Para Render.com
+  } : false,
   connection: {
     application_name: 'gei-unified-platform'
   }
