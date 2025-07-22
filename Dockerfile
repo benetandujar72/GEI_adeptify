@@ -66,6 +66,9 @@ RUN chmod +x ./scripts/*.sh
 COPY --from=base /app/drizzle.config.ts ./
 COPY --from=base /app/render.yaml ./
 
+# Copiar archivos de migración
+COPY --from=base /app/drizzle ./drizzle
+
 # Cambiar propietario de los archivos
 RUN chown -R nextjs:nodejs /app
 

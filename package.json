@@ -28,6 +28,7 @@
     "db:check-simple": "node scripts/check-db-simple.js",
     "db:migrate": "node scripts/migrate-database.js",
     "db:migrate-direct": "node scripts/migrate-direct.js",
+    "db:create-tables": "node scripts/create-tables.js",
     "diagnose": "node scripts/diagnose-production.js",
     "test:endpoints": "node scripts/test-endpoints.js",
     "lint": "eslint . --ext .ts,.tsx",
