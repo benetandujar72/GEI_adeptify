@@ -34,7 +34,14 @@ const port = process.env.PORT || 3000;
 
 // Configuración de base de datos
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
-const sql = postgres(databaseUrl);
+const sql = postgres(databaseUrl, {
+  max: 5, // Máximo 5 conexiones en el pool
+  idle_timeout: 20, // Cerrar conexiones inactivas después de 20 segundos
+  connect_timeout: 10, // Timeout de conexión de 10 segundos
+  connection: {
+    application_name: 'gei-unified-platform'
+  }
+});
 export const db = drizzle(sql);
 
 // Middleware de seguridad
@@ -102,6 +109,35 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Database health check endpoint
+app.get('/api/health/db', async (req, res) => {
+  try {
+    // Test database connection
+    const result = await sql`SELECT 1 as test, current_timestamp as timestamp`;
+    
+    res.json({
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      test_result: result[0],
+      connection_info: {
+        host: process.env.DB_HOST || 'unknown',
+        database: process.env.DB_NAME || 'unknown',
+        pool_size: 5,
+        max_connections: 10 // Render limit
+      }
+    });
+  } catch (error) {
+    logger.error('Database health check failed:', error);
+    res.status(500).json({
+      status: 'error',
+      database: 'disconnected',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Configuración de rutas API
 app.use('/api', setupRoutes());
 
@@ -145,18 +181,40 @@ async function initializeApp() {
 }
 
 // Manejo de señales de terminación
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('🛑 Recibida señal SIGTERM, cerrando servidor...');
-  server.close(() => {
-    logger.info('✅ Servidor cerrado correctamente');
+  
+  // Cerrar servidor HTTP
+  server.close(async () => {
+    logger.info('✅ Servidor HTTP cerrado correctamente');
+    
+    // Cerrar conexiones de base de datos
+    try {
+      await sql.end();
+      logger.info('✅ Conexiones de base de datos cerradas correctamente');
+    } catch (error) {
+      logger.error('❌ Error al cerrar conexiones de base de datos:', error);
+    }
+    
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('🛑 Recibida señal SIGINT, cerrando servidor...');
-  server.close(() => {
-    logger.info('✅ Servidor cerrado correctamente');
+  
+  // Cerrar servidor HTTP
+  server.close(async () => {
+    logger.info('✅ Servidor HTTP cerrado correctamente');
+    
+    // Cerrar conexiones de base de datos
+    try {
+      await sql.end();
+      logger.info('✅ Conexiones de base de datos cerradas correctamente');
+    } catch (error) {
+      logger.error('❌ Error al cerrar conexiones de base de datos:', error);
+    }
+    
     process.exit(0);
   });
 });
