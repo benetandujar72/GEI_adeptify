@@ -26,6 +26,7 @@
     "debug:production": "node scripts/debug-production.js",
     "db:init": "node scripts/init-database.js",
     "db:check": "node scripts/check-database.js",
+    "db:check-simple": "node scripts/check-db-simple.js",
     "diagnose": "node scripts/diagnose-production.js",
     "test:endpoints": "node scripts/test-endpoints.js",
     "lint": "eslint . --ext .ts,.tsx",

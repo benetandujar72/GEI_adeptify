@@ -13,7 +13,7 @@ import {
   classes,
   competencies,
   resources
-} from '../shared/schema.js';
+} from '../dist/shared/schema.js';
 
 // Cargar variables de entorno
 config();
