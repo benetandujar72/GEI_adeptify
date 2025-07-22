@@ -170,9 +170,20 @@ app.use('/api', setupRoutes());
 const wss = new WebSocketServer({ server });
 setupWebSocket(wss);
 
-// Manejo de rutas del cliente (SPA)
+// Manejo de rutas del cliente (SPA) - SOLO para rutas que no sean API ni archivos estáticos
 if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
+  app.get('*', (req, res, next) => {
+    // No interceptar rutas de API
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    
+    // No interceptar archivos estáticos
+    if (req.path.includes('.') && !req.path.includes('..')) {
+      return next();
+    }
+    
+    // Para todas las demás rutas, servir index.html (SPA)
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
