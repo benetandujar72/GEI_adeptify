@@ -118,8 +118,7 @@ try {
     '@types/express',
     '@types/cors',
     '@types/compression',
-    '@types/node-fetch',
-    '@types/dotenv'
+    '@types/node-fetch'
   ];
   
   let missingDeps = 0;

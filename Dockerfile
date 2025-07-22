@@ -25,7 +25,7 @@ COPY client/vite.config.ts ./client/
 COPY client/index.html ./client/
 
 # Instalar todas las dependencias (incluyendo devDependencies para el build)
-RUN npm ci --only=production=false
+RUN npm ci
 
 # Copiar código fuente
 COPY . .
@@ -53,7 +53,7 @@ WORKDIR /app
 COPY --from=base /app/package*.json ./
 
 # Instalar dependencias de producción y desarrollo necesarias para el build
-RUN npm ci --only=production=false && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Copiar archivos construidos
 COPY --from=base /app/dist ./dist
