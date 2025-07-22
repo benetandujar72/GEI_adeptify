@@ -23,7 +23,11 @@ if (!databaseUrl) {
 try {
     // Conectar a la base de datos
     console.log('🔌 Conectando a la base de datos...');
-    const sql = postgres(databaseUrl);
+    const sql = postgres(databaseUrl, {
+        ssl: process.env.NODE_ENV === 'production' ? {
+            rejectUnauthorized: false // Para Render.com
+        } : false
+    });
     const db = drizzle(sql);
 
     // Verificar conexión

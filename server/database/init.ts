@@ -5,7 +5,14 @@ import { logger } from '../utils/logger.js';
 
 // Configuración de base de datos
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
-const sql = postgres(databaseUrl, { max: 1 });
+
+// Configuración de conexión con SSL para Render
+const sql = postgres(databaseUrl, { 
+  max: 1,
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: false // Para Render.com
+  } : false
+});
 export const db = drizzle(sql);
 
 /**
