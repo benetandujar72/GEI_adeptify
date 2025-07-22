@@ -101,7 +101,7 @@ setupPassport(passport);
 
 // Servir archivos estáticos del cliente
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../dist/client')));
+  app.use(express.static(path.join(__dirname, '../client/dist')));
 }
 
 // Health check endpoint
@@ -164,7 +164,7 @@ setupWebSocket(wss);
 // Manejo de rutas del cliente (SPA)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/client/index.html'));
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
 
