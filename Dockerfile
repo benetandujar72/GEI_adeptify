@@ -16,6 +16,14 @@ COPY postcss.config.js ./
 COPY vite.config.ts ./
 COPY esbuild.config.js ./
 
+# Copiar archivos de configuración del cliente
+COPY client/postcss.config.js ./client/
+COPY client/tailwind.config.js ./client/
+COPY client/tsconfig.node.json ./client/
+COPY client/tsconfig.json ./client/
+COPY client/vite.config.ts ./client/
+COPY client/index.html ./client/
+
 # Instalar todas las dependencias (incluyendo devDependencies para el build)
 RUN npm ci --only=production=false
 
