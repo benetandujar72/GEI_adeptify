@@ -5,7 +5,7 @@
  * Útil para diagnosticar problemas de conexión en Render.com
  */
 
-import postgres from '@neondatabase/serverless';
+import postgres from 'postgres';
 
 const databaseUrl = process.env.DATABASE_URL;
 
