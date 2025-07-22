@@ -57,8 +57,9 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "ws:", "wss:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'sha256-adZL5tq2getU14Zvm3HPDk7Uivy3/+4vhfw8OLrqKhY='"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      connectSrc: ["'self'", "ws:", "wss:", "https://gei.adeptify.es", "https://gei-adeptify.onrender.com"],
     },
   },
 }));
