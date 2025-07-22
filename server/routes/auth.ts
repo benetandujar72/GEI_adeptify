@@ -13,19 +13,29 @@ router.post('/login', async (req, res) => {
     const { username, password, instituteId } = req.body;
     
     logger.info(`🔐 Intento de login: ${username} (instituto: ${instituteId})`);
+    logger.info(`📋 Body completo:`, req.body);
+    logger.info(`📋 Headers:`, req.headers);
     
     if (!username || !password) {
+      logger.warn(`❌ Datos faltantes - username: ${!!username}, password: ${!!password}`);
       return res.status(400).json({ 
         success: false, 
-        message: 'Usuario y contraseña son requeridos' 
+        message: 'Usuario y contraseña son requeridos',
+        received: {
+          username: !!username,
+          password: !!password,
+          instituteId: !!instituteId
+        }
       });
     }
     
     // Buscar usuario por email o username
     let user = null;
     if (username.includes('@')) {
+      logger.info(`🔍 Buscando usuario por email: ${username}`);
       [user] = await db.select().from(users).where(eq(users.email, username));
     } else {
+      logger.info(`🔍 Buscando usuario por username: ${username}`);
       [user] = await db.select().from(users).where(eq(users.username, username));
     }
     
@@ -37,6 +47,8 @@ router.post('/login', async (req, res) => {
       });
     }
     
+    logger.info(`✅ Usuario encontrado: ${user.email} (role: ${user.role})`);
+    
     // Verificar contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     
@@ -47,6 +59,8 @@ router.post('/login', async (req, res) => {
         message: 'Credenciales incorrectas' 
       });
     }
+    
+    logger.info(`✅ Contraseña válida para usuario: ${username}`);
     
     // Si es super_admin, no necesita instituteId
     if (user.role === 'super_admin') {
@@ -67,6 +81,7 @@ router.post('/login', async (req, res) => {
     
     // Para otros roles, verificar instituteId
     if (!instituteId) {
+      logger.warn(`❌ instituteId requerido para usuario ${username} (role: ${user.role})`);
       return res.status(400).json({ 
         success: false, 
         message: 'Selección de instituto requerida' 
@@ -100,7 +115,8 @@ router.post('/login', async (req, res) => {
     logger.error('❌ Error en login:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Error interno del servidor' 
+      message: 'Error interno del servidor',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

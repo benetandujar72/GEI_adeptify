@@ -157,6 +157,31 @@ if (process.env.NODE_ENV === 'production') {
   
   app.use(express.static(path.join(__dirname, '../client/dist')));
   logger.info('✅ Middleware de archivos estáticos configurado');
+  
+  // Endpoints específicos para archivos críticos
+  app.get('/manifest.json', (req, res) => {
+    const manifestPath = path.join(__dirname, '../client/dist/manifest.json');
+    const fs = require('fs');
+    if (fs.existsSync(manifestPath)) {
+      res.setHeader('Content-Type', 'application/json');
+      res.sendFile(manifestPath);
+    } else {
+      logger.error('❌ manifest.json no encontrado en:', manifestPath);
+      res.status(404).json({ error: 'manifest.json not found' });
+    }
+  });
+  
+  app.get('/logo.svg', (req, res) => {
+    const logoPath = path.join(__dirname, '../client/dist/logo.svg');
+    const fs = require('fs');
+    if (fs.existsSync(logoPath)) {
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.sendFile(logoPath);
+    } else {
+      logger.error('❌ logo.svg no encontrado en:', logoPath);
+      res.status(404).json({ error: 'logo.svg not found' });
+    }
+  });
 }
 
 // Health check endpoint
@@ -271,7 +296,7 @@ if (process.env.NODE_ENV === 'production') {
   logger.info('🌐 Configurando rutas SPA para producción...');
   
   app.get('*', (req, res, next) => {
-    logger.info(`🔍 Petición recibida: ${req.method} ${req.path}`);
+    logger.info(`�� Petición recibida: ${req.method} ${req.path}`);
     logger.info(`📋 Headers: ${JSON.stringify(req.headers, null, 2)}`);
     
     // No interceptar rutas de API
