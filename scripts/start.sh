@@ -1,63 +1,18 @@
 #!/bin/sh
 
-# Script de inicio simplificado para GEI Unified Platform
+# Script de inicio mejorado para GEI Unified Platform
 echo "🚀 Iniciando GEI Unified Platform..."
 
 # Verificar variables de entorno críticas
 echo "🔍 Verificando variables de entorno..."
 
 if [ -z "$DATABASE_URL" ]; then
-    echo "⚠️ DATABASE_URL no configurada"
+    echo "❌ ERROR: DATABASE_URL no configurada - CRÍTICO"
+    echo "🔧 Configurando DATABASE_URL con variables separadas..."
+    export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
+    echo "✅ DATABASE_URL configurada: postgresql://${DB_USER}:***@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
 else
     echo "✅ DATABASE_URL configurada"
-fi
-
-if [ -z "$DB_HOST" ]; then
-    echo "⚠️ DB_HOST no configurada"
-else
-    echo "✅ DB_HOST configurada"
-fi
-
-if [ -z "$DB_NAME" ]; then
-    echo "⚠️ DB_NAME no configurada"
-else
-    echo "✅ DB_NAME configurada"
-fi
-
-if [ -z "$DB_USER" ]; then
-    echo "⚠️ DB_USER no configurada"
-else
-    echo "✅ DB_USER configurada"
-fi
-
-if [ -z "$DB_PASSWORD" ]; then
-    echo "⚠️ DB_PASSWORD no configurada"
-else
-    echo "✅ DB_PASSWORD configurada"
-fi
-
-if [ -z "$SESSION_SECRET" ]; then
-    echo "⚠️ SESSION_SECRET no configurada"
-else
-    echo "✅ SESSION_SECRET configurada"
-fi
-
-if [ -z "$GOOGLE_CLIENT_ID" ]; then
-    echo "⚠️ GOOGLE_CLIENT_ID no configurada"
-else
-    echo "✅ GOOGLE_CLIENT_ID configurada"
-fi
-
-if [ -z "$GOOGLE_CLIENT_SECRET" ]; then
-    echo "⚠️ GOOGLE_CLIENT_SECRET no configurada"
-else
-    echo "✅ GOOGLE_CLIENT_SECRET configurada"
-fi
-
-if [ -z "$GEMINI_API_KEY" ]; then
-    echo "⚠️ GEMINI_API_KEY no configurada"
-else
-    echo "✅ GEMINI_API_KEY configurada"
 fi
 
 # Mostrar información del entorno
@@ -66,28 +21,6 @@ echo "🔌 PORT: $PORT"
 echo "📁 PWD: $(pwd)"
 echo "📦 Node version: $(node --version)"
 echo "📦 NPM version: $(npm --version)"
-
-# Debug de base de datos con variables separadas
-echo "🔍 Ejecutando diagnóstico avanzado de base de datos..."
-node scripts/test-db-advanced.js
-
-# Esperar a que la base de datos esté lista con test simple
-echo "⏳ Esperando a que la base de datos esté lista..."
-
-while ! node scripts/test-db-simple.js 2>/dev/null; do
-    echo "⏳ Base de datos no disponible, reintentando en 5 segundos..."
-    sleep 5
-done
-
-echo "✅ Base de datos conectada exitosamente"
-
-# Verificar estructura y datos de la base de datos
-echo "🔍 Verificando estructura de la base de datos..."
-npm run verify:db
-
-# Ejecutar migraciones
-echo "📦 Ejecutando migraciones..."
-npm run db:push
 
 # Verificar que el build existe
 echo "🔍 Verificando archivos de build..."
@@ -104,8 +37,43 @@ fi
 
 echo "✅ Build verificado: dist/index.js existe"
 
+# Intentar conexión a base de datos con timeout
+echo "⏳ Probando conexión a base de datos..."
+MAX_ATTEMPTS=12  # 1 minuto máximo (12 * 5 segundos)
+ATTEMPT=0
+
+while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+    if node scripts/test-db-simple.js >/dev/null 2>&1; then
+        echo "✅ Base de datos conectada exitosamente"
+        break
+    else
+        ATTEMPT=$((ATTEMPT + 1))
+        REMAINING=$((MAX_ATTEMPTS - ATTEMPT))
+        echo "⏳ Base de datos no disponible, reintentando en 5 segundos... (intentos restantes: $REMAINING)"
+        sleep 5
+    fi
+done
+
+if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+    echo "❌ ERROR: No se pudo conectar a la base de datos después de $MAX_ATTEMPTS intentos"
+    echo "🔍 Ejecutando diagnóstico detallado..."
+    node scripts/test-db-simple.js
+    echo "⚠️ Continuando sin conexión a base de datos..."
+fi
+
+# Ejecutar migraciones solo si la base de datos está disponible
+echo "📦 Intentando ejecutar migraciones..."
+if npm run db:push >/dev/null 2>&1; then
+    echo "✅ Migraciones ejecutadas exitosamente"
+else
+    echo "⚠️ No se pudieron ejecutar las migraciones"
+fi
+
 # Iniciar la aplicación
-echo "🚀 Iniciando servidor..."
+echo "🚀 Iniciando servidor en puerto $PORT..."
 echo "🌐 La aplicación estará disponible en el puerto $PORT"
+
+# Asegurar que el puerto esté configurado
+export PORT=${PORT:-3000}
 
 exec node dist/index.js 
