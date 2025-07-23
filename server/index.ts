@@ -127,6 +127,64 @@ app.use(passport.initialize());
 app.use(passport.session());
 setupPassport(passport);
 
+// Endpoint temporal para manifest.json
+app.get('/manifest.json', (req, res) => {
+  logger.info('🔍 ===== PETICIÓN MANIFEST.JSON RECIBIDA (ENDPOINT TEMPORAL) =====');
+  
+  const manifestContent = {
+    "name": "GEI Unified Platform",
+    "short_name": "GEI Platform",
+    "description": "Plataforma Unificada de Gestión Educativa Integral",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#3b82f6",
+    "icons": [
+      {
+        "src": "/logo.svg",
+        "sizes": "any",
+        "type": "image/svg+xml",
+        "purpose": "any maskable"
+      }
+    ]
+  };
+  
+  logger.info('✅ Enviando manifest.json desde endpoint temporal');
+  res.setHeader('Content-Type', 'application/json');
+  res.json(manifestContent);
+});
+
+// Endpoint temporal para logo.svg
+app.get('/logo.svg', (req, res) => {
+  logger.info('🔍 ===== PETICIÓN LOGO.SVG RECIBIDA (ENDPOINT TEMPORAL) =====');
+  
+  const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fondo circular -->
+  <circle cx="50" cy="50" r="45" fill="url(#grad1)" stroke="#1e40af" stroke-width="2"/>
+  
+  <!-- Letra G estilizada -->
+  <path d="M30 25 Q30 15 40 15 L60 15 Q70 15 70 25 L70 35 Q70 45 60 45 L45 45 L45 55 L60 55 Q70 55 70 65 L70 75 Q70 85 60 85 L40 85 Q30 85 30 75 L30 65 Q30 55 40 55 L55 55 L55 45 L40 45 Q30 45 30 35 Z" 
+        fill="white" stroke="white" stroke-width="1"/>
+  
+  <!-- Elementos decorativos -->
+  <circle cx="25" cy="25" r="3" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="75" cy="75" r="3" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="75" cy="25" r="2" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="25" cy="75" r="2" fill="#fbbf24" opacity="0.6"/>
+</svg>`;
+  
+  logger.info('✅ Enviando logo.svg desde endpoint temporal');
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.send(logoSvg);
+});
+
 // Servir archivos estáticos del cliente
 if (process.env.NODE_ENV === 'production') {
   logger.info('📁 ===== INICIO CONFIGURACIÓN ARCHIVOS ESTÁTICOS =====');
