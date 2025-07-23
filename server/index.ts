@@ -130,6 +130,7 @@ setupPassport(passport);
 // Servir archivos estáticos del cliente
 if (process.env.NODE_ENV === 'production') {
   logger.info('📁 ===== INICIO CONFIGURACIÓN ARCHIVOS ESTÁTICOS =====');
+  logger.info('🔄 REDEPLOY FORZADO - Verificando archivos manifest.json y logo.svg');
   logger.info(`📂 __dirname: ${__dirname}`);
   logger.info(`📂 process.cwd(): ${process.cwd()}`);
   
