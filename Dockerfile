@@ -23,6 +23,7 @@ COPY client/tsconfig.node.json ./client/
 COPY client/tsconfig.json ./client/
 COPY client/vite.config.ts ./client/
 COPY client/index.html ./client/
+COPY client/public ./client/public
 
 # Instalar dependencias con configuración optimizada
 RUN npm ci --only=production --ignore-scripts && \
@@ -45,6 +46,8 @@ RUN echo "=== Verificando archivos críticos ===" && \
     ls -la client/tsconfig.json && \
     ls -la client/vite.config.ts && \
     ls -la client/index.html && \
+    ls -la client/public/manifest.json && \
+    ls -la client/public/logo.svg && \
     ls -la server/index.ts && \
     ls -la client/src/App.tsx
 
