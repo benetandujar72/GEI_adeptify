@@ -150,7 +150,7 @@ router.get('/me', (req, res) => {
     logger.info('✅ Usuario autenticado encontrado en sesión');
     return res.json({
       user: {
-        id: req.session.userId,
+        id: req.session.userId.toString(),
         email: req.session.userEmail || 'superadmin@gei.es',
         displayName: 'Super Administrador',
         firstName: 'Super',

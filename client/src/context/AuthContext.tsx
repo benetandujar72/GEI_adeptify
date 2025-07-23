@@ -109,15 +109,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error d\'inici de sessió');
+        throw new Error(data.error || data.message || 'Error d\'inici de sessió');
       }
 
+      // Establecer el usuario en el contexto
       setUser(data.user);
       
-      // Forzar recarga de la página para actualizar el estado completo
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 100);
+      // Verificar que la sesión se estableció correctamente
+      setTimeout(async () => {
+        try {
+          const meResponse = await fetch('/api/auth/me', {
+            credentials: 'include',
+          });
+          
+          if (meResponse.ok) {
+            const meData = await meResponse.json();
+            console.log('✅ Sesión verificada:', meData);
+            // Redirigir solo si la sesión está confirmada
+            window.location.href = '/dashboard';
+          } else {
+            console.error('❌ Error verificando sesión:', meResponse.status);
+            setError('Error verificando la sesión');
+          }
+        } catch (error) {
+          console.error('❌ Error verificando sesión:', error);
+          setError('Error verificando la sesión');
+        }
+      }, 500); // Esperar 500ms para que la sesión se establezca
+      
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error d\'inici de sessió');
       throw error;
