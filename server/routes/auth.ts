@@ -7,46 +7,64 @@ import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-// Login funcional
+// Login
 router.post('/login', async (req, res) => {
   try {
-    const { username, email, password, instituteId } = req.body;
+    logger.info('🔐 ===== INTENTO DE LOGIN =====');
+    logger.info(`📋 Body recibido: ${JSON.stringify(req.body)}`);
     
-    // Aceptar tanto username como email
-    const userIdentifier = username || email;
+    const { email, username, password } = req.body;
+    const userIdentifier = email || username;
     
-    logger.info(`🔐 Intento de login: ${userIdentifier} (instituto: ${instituteId})`);
-    logger.info(`📋 Body completo:`, req.body);
+    logger.info(`🔐 Intento de login con: ${userIdentifier}`);
     
+    // Validación básica
     if (!userIdentifier || !password) {
-      logger.warn(`❌ Datos faltantes - userIdentifier: ${!!userIdentifier}, password: ${!!password}`);
+      logger.warn('❌ Faltan credenciales');
       return res.status(400).json({ 
-        success: false, 
-        message: 'Usuario/email y contraseña son requeridos',
-        received: {
-          username: !!username,
-          email: !!email,
-          password: !!password,
-          instituteId: !!instituteId
-        }
+        success: false,
+        message: 'Email/username y contraseña son requeridos' 
       });
     }
     
-    // Por ahora, devolver una respuesta temporal para superadmin
-    if (userIdentifier === 'superadmin@gei.es' && password === 'password123') {
-      logger.info(`✅ Login exitoso para super admin: ${userIdentifier}`);
-      return res.json({
-        success: true,
-        user: {
-          id: 1,
-          email: 'superadmin@gei.es',
-          display_name: 'Super Administrador',
-          first_name: 'Super',
-          last_name: 'Admin',
-          role: 'super_admin',
-          institute_id: null
+    // Por ahora, solo aceptamos el superadmin con credenciales hardcoded
+    if ((userIdentifier === 'superadmin@gei.es' || userIdentifier === 'superadmin') && 
+        password === 'password123') {
+      
+      logger.info('✅ Login exitoso para super admin');
+      
+      // Establecer sesión
+      req.session.userId = 1;
+      req.session.userEmail = 'superadmin@gei.es';
+      req.session.userRole = 'super_admin';
+      
+      // Guardar sesión antes de responder
+      req.session.save((err) => {
+        if (err) {
+          logger.error('❌ Error guardando sesión:', err);
+          return res.status(500).json({ 
+            success: false,
+            message: 'Error al guardar la sesión' 
+          });
         }
+        
+        logger.info('✅ Sesión guardada correctamente');
+        
+        return res.json({ 
+          success: true,
+          user: {
+            id: 1,
+            email: 'superadmin@gei.es',
+            displayName: 'Super Administrador',
+            firstName: 'Super',
+            lastName: 'Admin',
+            role: 'super_admin',
+            instituteId: null
+          }
+        });
       });
+      
+      return; // Importante: evitar continuar después de guardar sesión
     }
     
     // Para otros usuarios, devolver error temporal
@@ -120,23 +138,35 @@ router.get('/google/callback', (req, res) => {
 
 // Get current user
 router.get('/me', (req, res) => {
-  try {
-    logger.info('Auth /me endpoint called');
-    
-    // Por ahora, devolver null para indicar que no hay usuario autenticado
-    // Esto permitirá que la aplicación cargue sin problemas
-    res.json({ 
-      user: null,
-      authenticated: false,
-      message: 'No user authenticated'
-    });
-  } catch (error) {
-    logger.error('Error in /me endpoint:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+  logger.info('Auth /me endpoint called');
+  logger.info(`📋 Sesión: ${JSON.stringify({
+    userId: req.session.userId,
+    userEmail: req.session.userEmail,
+    userRole: req.session.userRole
+  })}`);
+  
+  // Verificar si hay sesión activa
+  if (req.session.userId) {
+    logger.info('✅ Usuario autenticado encontrado en sesión');
+    return res.json({
+      user: {
+        id: req.session.userId,
+        email: req.session.userEmail || 'superadmin@gei.es',
+        displayName: 'Super Administrador',
+        firstName: 'Super',
+        lastName: 'Admin',
+        role: req.session.userRole || 'super_admin',
+        instituteId: null
+      }
     });
   }
+  
+  logger.info('❌ No hay usuario autenticado en la sesión');
+  res.status(401).json({ 
+    message: 'No autenticado',
+    sessionExists: !!req.session,
+    sessionId: req.sessionID
+  });
 });
 
 export default router; 

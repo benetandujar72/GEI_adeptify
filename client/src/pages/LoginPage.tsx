@@ -133,10 +133,13 @@ export default function LoginPage() {
                 </label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
-                  placeholder="el-teu@email.com"
+                  autoComplete="email"
+                  placeholder="correu@exemple.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1"
                   required
                   disabled={isSubmitting}
                 />
@@ -148,10 +151,13 @@ export default function LoginPage() {
                 </label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
-                  placeholder="La teva contrasenya"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1"
                   required
                   disabled={isSubmitting}
                 />
