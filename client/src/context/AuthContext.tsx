@@ -20,8 +20,14 @@ export interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
+  isSigningIn: boolean;
+  isAdmin: boolean;
+  instituteName: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => void;
+  signIn: () => void;
+  devLogin: () => void;
   logout: () => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -54,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   // Verificar sesión al cargar
   useEffect(() => {
@@ -149,6 +156,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = '/api/auth/google';
   };
 
+  const signIn = () => {
+    setIsSigningIn(true);
+    window.location.href = '/api/auth/google';
+  };
+
+  const devLogin = () => {
+    setIsSigningIn(true);
+    // Simular login de desarrollo
+    setTimeout(() => {
+      setUser({
+        id: 'dev-user',
+        email: 'dev@example.com',
+        displayName: 'Developer User',
+        role: 'admin',
+        instituteId: 'dev-institute',
+        institute: {
+          id: 'dev-institute',
+          name: 'Institut de Desenvolupament',
+          code: 'DEV'
+        }
+      });
+      setIsSigningIn(false);
+    }, 1000);
+  };
+
   const logout = async () => {
     try {
       setLoading(true);
@@ -230,8 +262,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     error,
+    isAuthenticated: !!user,
+    isSigningIn,
+    isAdmin: user?.role === 'admin',
+    instituteName: user?.institute?.name || null,
     login,
     loginWithGoogle,
+    signIn,
+    devLogin,
     logout,
     register,
     changePassword,

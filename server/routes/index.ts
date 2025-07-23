@@ -10,6 +10,8 @@ import surveyRoutes from './surveys.js';
 import resourceRoutes from './resources.js';
 import analyticsRoutes from './analytics.js';
 import aiRoutes from './ai.js';
+import adeptifyRoutes from './adeptify.js';
+import assistatutRoutes from './assistatut.js';
 
 /**
  * Configura todas las rutas de la API
@@ -31,6 +33,10 @@ export function setupRoutes(): Router {
   router.use('/resources', resourceRoutes);
   router.use('/analytics', analyticsRoutes);
   router.use('/ai', aiRoutes);
+  
+  // Módulos específicos
+  router.use('/adeptify', adeptifyRoutes);
+  router.use('/assistatut', assistatutRoutes);
 
   // Ruta de prueba
   router.get('/test', (req, res) => {
