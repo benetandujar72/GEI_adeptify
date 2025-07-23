@@ -155,13 +155,12 @@ if (process.env.NODE_ENV === 'production') {
     logger.error(`🔍 Buscando en: ${staticPath}`);
   }
   
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  logger.info('✅ Middleware de archivos estáticos configurado');
-  
-  // Endpoints específicos para archivos críticos
+  // Endpoints específicos para archivos críticos (ANTES de express.static)
   app.get('/manifest.json', (req, res) => {
+    logger.info('🔍 Petición a /manifest.json recibida');
     const manifestPath = path.join(__dirname, '../client/dist/manifest.json');
     if (fs.existsSync(manifestPath)) {
+      logger.info('✅ manifest.json encontrado, enviando archivo');
       res.setHeader('Content-Type', 'application/json');
       res.sendFile(manifestPath);
     } else {
@@ -171,8 +170,10 @@ if (process.env.NODE_ENV === 'production') {
   });
   
   app.get('/logo.svg', (req, res) => {
+    logger.info('🔍 Petición a /logo.svg recibida');
     const logoPath = path.join(__dirname, '../client/dist/logo.svg');
     if (fs.existsSync(logoPath)) {
+      logger.info('✅ logo.svg encontrado, enviando archivo');
       res.setHeader('Content-Type', 'image/svg+xml');
       res.sendFile(logoPath);
     } else {
@@ -180,6 +181,9 @@ if (process.env.NODE_ENV === 'production') {
       res.status(404).json({ error: 'logo.svg not found' });
     }
   });
+  
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  logger.info('✅ Middleware de archivos estáticos configurado');
 }
 
 // Health check endpoint
