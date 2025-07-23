@@ -129,73 +129,130 @@ setupPassport(passport);
 
 // Servir archivos estáticos del cliente
 if (process.env.NODE_ENV === 'production') {
-  logger.info('📁 Configurando archivos estáticos para producción...');
+  logger.info('📁 ===== INICIO CONFIGURACIÓN ARCHIVOS ESTÁTICOS =====');
+  logger.info(`📂 __dirname: ${__dirname}`);
+  logger.info(`📂 process.cwd(): ${process.cwd()}`);
   
   // Intentar múltiples rutas posibles para los archivos estáticos
   const possiblePaths = [
     path.join(__dirname, '../client/dist'),
     path.join(__dirname, '../../client/dist'),
     path.join(__dirname, '../dist/client'),
-    path.join(__dirname, './client/dist')
+    path.join(__dirname, './client/dist'),
+    path.join(process.cwd(), 'client/dist'),
+    path.join(process.cwd(), 'dist/client'),
+    path.join(process.cwd(), 'dist')
   ];
   
+  logger.info('🔍 ===== PROBANDO RUTAS POSIBLES =====');
   let staticPath = null;
   for (const testPath of possiblePaths) {
     logger.info(`🔍 Probando ruta: ${testPath}`);
-    if (fs.existsSync(testPath)) {
+    const exists = fs.existsSync(testPath);
+    logger.info(`   ${exists ? '✅ EXISTE' : '❌ NO EXISTE'}: ${testPath}`);
+    
+    if (exists) {
       staticPath = testPath;
-      logger.info(`✅ Directorio encontrado en: ${staticPath}`);
+      logger.info(`🎯 DIRECTORIO ENCONTRADO: ${staticPath}`);
       break;
     }
   }
   
   if (!staticPath) {
-    logger.error('❌ No se encontró el directorio de archivos estáticos en ninguna ruta');
+    logger.error('❌ ===== CRÍTICO: NO SE ENCONTRÓ NINGÚN DIRECTORIO =====');
     possiblePaths.forEach(p => logger.error(`   🔍 Buscado en: ${p}`));
+    logger.error('❌ ===== FIN CONFIGURACIÓN ARCHIVOS ESTÁTICOS =====');
   } else {
+    logger.info('📋 ===== LISTANDO CONTENIDO DEL DIRECTORIO =====');
     // Listar archivos en el directorio
     try {
       const files = fs.readdirSync(staticPath);
-      logger.info(`📋 Archivos encontrados en dist: ${files.length} archivos`);
-      files.slice(0, 10).forEach(file => {
-        logger.info(`   📄 ${file}`);
+      logger.info(`📋 Total archivos encontrados: ${files.length}`);
+      logger.info(`📂 Directorio: ${staticPath}`);
+      
+      // Buscar archivos específicos
+      const manifestExists = files.includes('manifest.json');
+      const logoExists = files.includes('logo.svg');
+      const indexExists = files.includes('index.html');
+      
+      logger.info(`📄 manifest.json: ${manifestExists ? '✅ ENCONTRADO' : '❌ NO ENCONTRADO'}`);
+      logger.info(`📄 logo.svg: ${logoExists ? '✅ ENCONTRADO' : '❌ NO ENCONTRADO'}`);
+      logger.info(`📄 index.html: ${indexExists ? '✅ ENCONTRADO' : '❌ NO ENCONTRADO'}`);
+      
+      // Listar todos los archivos
+      files.forEach((file, index) => {
+        logger.info(`   ${index + 1}. ${file}`);
       });
-      if (files.length > 10) {
-        logger.info(`   ... y ${files.length - 10} archivos más`);
-      }
+      
     } catch (error) {
       logger.error('❌ Error leyendo directorio de archivos estáticos:', error);
     }
     
     // Endpoints específicos para archivos críticos (ANTES de express.static)
     app.get('/manifest.json', (req, res) => {
-      logger.info('🔍 Petición a /manifest.json recibida');
+      logger.info('🔍 ===== PETICIÓN MANIFEST.JSON RECIBIDA =====');
+      logger.info(`📂 staticPath: ${staticPath}`);
       const manifestPath = path.join(staticPath, 'manifest.json');
-      if (fs.existsSync(manifestPath)) {
+      logger.info(`📂 Ruta completa: ${manifestPath}`);
+      
+      const fileExists = fs.existsSync(manifestPath);
+      logger.info(`📄 Archivo existe: ${fileExists ? '✅ SÍ' : '❌ NO'}`);
+      
+      if (fileExists) {
         logger.info('✅ manifest.json encontrado, enviando archivo');
         res.setHeader('Content-Type', 'application/json');
         res.sendFile(manifestPath);
       } else {
-        logger.error('❌ manifest.json no encontrado en:', manifestPath);
-        res.status(404).json({ error: 'manifest.json not found' });
+        logger.error('❌ ===== MANIFEST.JSON NO ENCONTRADO =====');
+        logger.error(`📂 Buscado en: ${manifestPath}`);
+        logger.error(`📂 staticPath: ${staticPath}`);
+        logger.error(`📂 __dirname: ${__dirname}`);
+        logger.error(`📂 process.cwd(): ${process.cwd()}`);
+        
+        // Intentar listar el directorio para debug
+        try {
+          const files = fs.readdirSync(staticPath);
+          logger.error(`📋 Archivos en el directorio: ${files.join(', ')}`);
+        } catch (listError) {
+          logger.error('❌ Error listando directorio:', listError);
+        }
+        
+        res.status(404).json({ 
+          error: 'manifest.json not found',
+          searchedPath: manifestPath,
+          staticPath: staticPath,
+          currentDir: __dirname,
+          processCwd: process.cwd()
+        });
       }
     });
     
     app.get('/logo.svg', (req, res) => {
-      logger.info('🔍 Petición a /logo.svg recibida');
+      logger.info('🔍 ===== PETICIÓN LOGO.SVG RECIBIDA =====');
       const logoPath = path.join(staticPath, 'logo.svg');
-      if (fs.existsSync(logoPath)) {
+      logger.info(`📂 Ruta completa: ${logoPath}`);
+      
+      const fileExists = fs.existsSync(logoPath);
+      logger.info(`📄 Archivo existe: ${fileExists ? '✅ SÍ' : '❌ NO'}`);
+      
+      if (fileExists) {
         logger.info('✅ logo.svg encontrado, enviando archivo');
         res.setHeader('Content-Type', 'image/svg+xml');
         res.sendFile(logoPath);
       } else {
-        logger.error('❌ logo.svg no encontrado en:', logoPath);
-        res.status(404).json({ error: 'logo.svg not found' });
+        logger.error('❌ ===== LOGO.SVG NO ENCONTRADO =====');
+        logger.error(`📂 Buscado en: ${logoPath}`);
+        res.status(404).json({ 
+          error: 'logo.svg not found',
+          searchedPath: logoPath,
+          staticPath: staticPath
+        });
       }
     });
     
     app.use(express.static(staticPath));
-    logger.info('✅ Middleware de archivos estáticos configurado');
+    logger.info('✅ ===== MIDDLEWARE DE ARCHIVOS ESTÁTICOS CONFIGURADO =====');
+    logger.info(`📂 Ruta configurada: ${staticPath}`);
   }
 }
 
@@ -247,6 +304,44 @@ app.get('/api/health/db', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
+});
+
+// Endpoint de debug específico para manifest.json
+app.get('/api/debug-manifest', (req, res) => {
+  logger.info('🔍 ===== ENDPOINT DEBUG MANIFEST SOLICITADO =====');
+  
+  const debugInfo: any = {
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    currentDir: __dirname,
+    processCwd: process.cwd(),
+    possiblePaths: [
+      path.join(__dirname, '../client/dist'),
+      path.join(__dirname, '../../client/dist'),
+      path.join(__dirname, '../dist/client'),
+      path.join(__dirname, './client/dist'),
+      path.join(process.cwd(), 'client/dist'),
+      path.join(process.cwd(), 'dist/client'),
+      path.join(process.cwd(), 'dist')
+    ]
+  };
+  
+  // Probar cada ruta
+  debugInfo.pathTests = [];
+  for (const testPath of debugInfo.possiblePaths) {
+    const exists = fs.existsSync(testPath);
+    debugInfo.pathTests.push({
+      path: testPath,
+      exists: exists,
+      files: exists ? fs.readdirSync(testPath) : null,
+      manifestExists: exists ? fs.existsSync(path.join(testPath, 'manifest.json')) : false,
+      logoExists: exists ? fs.existsSync(path.join(testPath, 'logo.svg')) : false,
+      indexExists: exists ? fs.existsSync(path.join(testPath, 'index.html')) : false
+    });
+  }
+  
+  logger.info('📊 Información de debug manifest:', debugInfo);
+  res.json(debugInfo);
 });
 
 // Endpoint de diagnóstico detallado
