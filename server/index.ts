@@ -11,6 +11,7 @@ import postgres from 'postgres';
 import { config } from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Configuración de variables de entorno
 config();
@@ -133,7 +134,6 @@ if (process.env.NODE_ENV === 'production') {
   
   // Verificar si el directorio existe
   const staticPath = path.join(__dirname, '../client/dist');
-  const fs = await import('fs');
   if (fs.existsSync(staticPath)) {
     logger.info('✅ Directorio de archivos estáticos encontrado');
     
@@ -211,9 +211,6 @@ app.get('/api/health/db', async (req, res) => {
 
 // Endpoint de diagnóstico detallado
 app.get('/api/debug', (req, res) => {
-  const fs = require('fs');
-  const path = require('path');
-  
   try {
     logger.info('🔍 Endpoint de diagnóstico solicitado');
     
@@ -292,7 +289,6 @@ if (process.env.NODE_ENV === 'production') {
     logger.info(`📂 Ruta del archivo: ${indexPath}`);
     
     // Verificar si el archivo existe
-    const fs = require('fs');
     if (fs.existsSync(indexPath)) {
       logger.info('✅ index.html encontrado, enviando archivo');
       res.sendFile(indexPath);
