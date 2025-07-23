@@ -112,14 +112,15 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000, // 24 horas
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
   },
-  store: process.env.NODE_ENV === 'production' 
-    ? new PostgresStore({
-        conString: process.env.DATABASE_URL,
-        createTableIfMissing: true,
-        ttl: 24 * 60 * 60, // 24 horas en segundos
-        tableName: 'sessions'
-      })
-    : undefined, // Usar MemoryStore solo en desarrollo
+  // TEMPORAL: Usar MemoryStore para evitar problemas SSL con PostgreSQL
+  // store: process.env.NODE_ENV === 'production' 
+  //   ? new PostgresStore({
+  //       conString: process.env.DATABASE_URL,
+  //       createTableIfMissing: true,
+  //       ttl: 24 * 60 * 60, // 24 horas en segundos
+  //       tableName: 'sessions'
+  //     })
+  //   : undefined, // Usar MemoryStore solo en desarrollo
 }));
 
 // Configuración de Passport
