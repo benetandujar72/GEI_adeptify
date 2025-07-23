@@ -130,13 +130,29 @@ setupPassport(passport);
 // Servir archivos estáticos del cliente
 if (process.env.NODE_ENV === 'production') {
   logger.info('📁 Configurando archivos estáticos para producción...');
-  logger.info(`📂 Ruta de archivos estáticos: ${path.join(__dirname, '../client/dist')}`);
   
-  // Verificar si el directorio existe
-  const staticPath = path.join(__dirname, '../client/dist');
-  if (fs.existsSync(staticPath)) {
-    logger.info('✅ Directorio de archivos estáticos encontrado');
-    
+  // Intentar múltiples rutas posibles para los archivos estáticos
+  const possiblePaths = [
+    path.join(__dirname, '../client/dist'),
+    path.join(__dirname, '../../client/dist'),
+    path.join(__dirname, '../dist/client'),
+    path.join(__dirname, './client/dist')
+  ];
+  
+  let staticPath = null;
+  for (const testPath of possiblePaths) {
+    logger.info(`🔍 Probando ruta: ${testPath}`);
+    if (fs.existsSync(testPath)) {
+      staticPath = testPath;
+      logger.info(`✅ Directorio encontrado en: ${staticPath}`);
+      break;
+    }
+  }
+  
+  if (!staticPath) {
+    logger.error('❌ No se encontró el directorio de archivos estáticos en ninguna ruta');
+    possiblePaths.forEach(p => logger.error(`   🔍 Buscado en: ${p}`));
+  } else {
     // Listar archivos en el directorio
     try {
       const files = fs.readdirSync(staticPath);
@@ -150,40 +166,37 @@ if (process.env.NODE_ENV === 'production') {
     } catch (error) {
       logger.error('❌ Error leyendo directorio de archivos estáticos:', error);
     }
-  } else {
-    logger.error('❌ Directorio de archivos estáticos NO encontrado');
-    logger.error(`🔍 Buscando en: ${staticPath}`);
+    
+    // Endpoints específicos para archivos críticos (ANTES de express.static)
+    app.get('/manifest.json', (req, res) => {
+      logger.info('🔍 Petición a /manifest.json recibida');
+      const manifestPath = path.join(staticPath, 'manifest.json');
+      if (fs.existsSync(manifestPath)) {
+        logger.info('✅ manifest.json encontrado, enviando archivo');
+        res.setHeader('Content-Type', 'application/json');
+        res.sendFile(manifestPath);
+      } else {
+        logger.error('❌ manifest.json no encontrado en:', manifestPath);
+        res.status(404).json({ error: 'manifest.json not found' });
+      }
+    });
+    
+    app.get('/logo.svg', (req, res) => {
+      logger.info('🔍 Petición a /logo.svg recibida');
+      const logoPath = path.join(staticPath, 'logo.svg');
+      if (fs.existsSync(logoPath)) {
+        logger.info('✅ logo.svg encontrado, enviando archivo');
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.sendFile(logoPath);
+      } else {
+        logger.error('❌ logo.svg no encontrado en:', logoPath);
+        res.status(404).json({ error: 'logo.svg not found' });
+      }
+    });
+    
+    app.use(express.static(staticPath));
+    logger.info('✅ Middleware de archivos estáticos configurado');
   }
-  
-  // Endpoints específicos para archivos críticos (ANTES de express.static)
-  app.get('/manifest.json', (req, res) => {
-    logger.info('🔍 Petición a /manifest.json recibida');
-    const manifestPath = path.join(__dirname, '../client/dist/manifest.json');
-    if (fs.existsSync(manifestPath)) {
-      logger.info('✅ manifest.json encontrado, enviando archivo');
-      res.setHeader('Content-Type', 'application/json');
-      res.sendFile(manifestPath);
-    } else {
-      logger.error('❌ manifest.json no encontrado en:', manifestPath);
-      res.status(404).json({ error: 'manifest.json not found' });
-    }
-  });
-  
-  app.get('/logo.svg', (req, res) => {
-    logger.info('🔍 Petición a /logo.svg recibida');
-    const logoPath = path.join(__dirname, '../client/dist/logo.svg');
-    if (fs.existsSync(logoPath)) {
-      logger.info('✅ logo.svg encontrado, enviando archivo');
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.sendFile(logoPath);
-    } else {
-      logger.error('❌ logo.svg no encontrado en:', logoPath);
-      res.status(404).json({ error: 'logo.svg not found' });
-    }
-  });
-  
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  logger.info('✅ Middleware de archivos estáticos configurado');
 }
 
 // Health check endpoint
@@ -244,7 +257,7 @@ app.get('/api/debug', (req, res) => {
     const staticPath = path.join(__dirname, '../client/dist');
     const indexPath = path.join(staticPath, 'index.html');
     
-    const debugInfo = {
+    const debugInfo: any = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       staticPath: staticPath,
@@ -267,7 +280,7 @@ app.get('/api/debug', (req, res) => {
         debugInfo.files = files;
         debugInfo.fileCount = files.length;
       } catch (error) {
-        debugInfo.readError = error.message;
+        debugInfo.readError = error instanceof Error ? error.message : 'Unknown error';
       }
     }
     
@@ -277,7 +290,7 @@ app.get('/api/debug', (req, res) => {
   } catch (error) {
     logger.error('❌ Error en endpoint de diagnóstico:', error);
     res.status(500).json({
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
   }
