@@ -10,19 +10,23 @@ const router = Router();
 // Login funcional
 router.post('/login', async (req, res) => {
   try {
-    const { username, password, instituteId } = req.body;
+    const { username, email, password, instituteId } = req.body;
     
-    logger.info(`🔐 Intento de login: ${username} (instituto: ${instituteId})`);
+    // Aceptar tanto username como email
+    const userIdentifier = username || email;
+    
+    logger.info(`🔐 Intento de login: ${userIdentifier} (instituto: ${instituteId})`);
     logger.info(`📋 Body completo:`, req.body);
     logger.info(`📋 Headers:`, req.headers);
     
-    if (!username || !password) {
-      logger.warn(`❌ Datos faltantes - username: ${!!username}, password: ${!!password}`);
+    if (!userIdentifier || !password) {
+      logger.warn(`❌ Datos faltantes - userIdentifier: ${!!userIdentifier}, password: ${!!password}`);
       return res.status(400).json({ 
         success: false, 
-        message: 'Usuario y contraseña son requeridos',
+        message: 'Usuario/email y contraseña son requeridos',
         received: {
           username: !!username,
+          email: !!email,
           password: !!password,
           instituteId: !!instituteId
         }
@@ -31,16 +35,16 @@ router.post('/login', async (req, res) => {
     
     // Buscar usuario por email o username
     let user = null;
-    if (username.includes('@')) {
-      logger.info(`🔍 Buscando usuario por email: ${username}`);
-      [user] = await db.select().from(users).where(eq(users.email, username));
+    if (userIdentifier.includes('@')) {
+      logger.info(`🔍 Buscando usuario por email: ${userIdentifier}`);
+      [user] = await db.select().from(users).where(eq(users.email, userIdentifier));
     } else {
-      logger.info(`🔍 Buscando usuario por username: ${username}`);
-      [user] = await db.select().from(users).where(eq(users.username, username));
+      logger.info(`🔍 Buscando usuario por username: ${userIdentifier}`);
+      [user] = await db.select().from(users).where(eq(users.username, userIdentifier));
     }
     
     if (!user) {
-      logger.warn(`❌ Usuario no encontrado: ${username}`);
+      logger.warn(`❌ Usuario no encontrado: ${userIdentifier}`);
       return res.status(401).json({ 
         success: false, 
         message: 'Credenciales incorrectas' 
@@ -53,18 +57,18 @@ router.post('/login', async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     
     if (!isPasswordValid) {
-      logger.warn(`❌ Contraseña incorrecta para usuario: ${username}`);
+      logger.warn(`❌ Contraseña incorrecta para usuario: ${userIdentifier}`);
       return res.status(401).json({ 
         success: false, 
         message: 'Credenciales incorrectas' 
       });
     }
     
-    logger.info(`✅ Contraseña válida para usuario: ${username}`);
+    logger.info(`✅ Contraseña válida para usuario: ${userIdentifier}`);
     
     // Si es super_admin, no necesita instituteId
     if (user.role === 'super_admin') {
-      logger.info(`✅ Login exitoso para super admin: ${username}`);
+      logger.info(`✅ Login exitoso para super admin: ${userIdentifier}`);
       return res.json({
         success: true,
         user: {
@@ -81,7 +85,7 @@ router.post('/login', async (req, res) => {
     
     // Para otros roles, verificar instituteId
     if (!instituteId) {
-      logger.warn(`❌ instituteId requerido para usuario ${username} (role: ${user.role})`);
+      logger.warn(`❌ instituteId requerido para usuario ${userIdentifier} (role: ${user.role})`);
       return res.status(400).json({ 
         success: false, 
         message: 'Selección de instituto requerida' 
@@ -89,14 +93,14 @@ router.post('/login', async (req, res) => {
     }
     
     if (user.institute_id && user.institute_id !== parseInt(instituteId)) {
-      logger.warn(`❌ Usuario ${username} no pertenece al instituto ${instituteId}`);
+      logger.warn(`❌ Usuario ${userIdentifier} no pertenece al instituto ${instituteId}`);
       return res.status(403).json({ 
         success: false, 
         message: 'Usuario no pertenece al instituto seleccionado' 
       });
     }
     
-    logger.info(`✅ Login exitoso: ${username} (instituto: ${instituteId})`);
+    logger.info(`✅ Login exitoso: ${userIdentifier} (instituto: ${instituteId})`);
     
     res.json({
       success: true,
