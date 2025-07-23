@@ -6,6 +6,35 @@ const router = Router();
 // TEMPORAL: Almacén de sesiones en memoria
 const sessionStore = new Map();
 
+// Función para parsear cookies manualmente
+function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  
+  if (!cookieHeader) return cookies;
+  
+  cookieHeader.split(';').forEach(cookie => {
+    const [name, value] = cookie.trim().split('=');
+    if (name && value) {
+      cookies[name] = decodeURIComponent(value);
+    }
+  });
+  
+  return cookies;
+}
+
+// Función para establecer cookies manualmente
+function setCookie(res: any, name: string, value: string, options: any = {}) {
+  let cookie = `${name}=${encodeURIComponent(value)}`;
+  
+  if (options.httpOnly) cookie += '; HttpOnly';
+  if (options.secure) cookie += '; Secure';
+  if (options.sameSite) cookie += `; SameSite=${options.sameSite}`;
+  if (options.maxAge) cookie += `; Max-Age=${options.maxAge}`;
+  if (options.path) cookie += `; Path=${options.path}`;
+  
+  res.setHeader('Set-Cookie', cookie);
+}
+
 // Login
 router.post('/login', async (req, res) => {
   try {
@@ -46,12 +75,13 @@ router.post('/login', async (req, res) => {
       sessionStore.set(sessionId, sessionData);
       logger.info(`✅ Sesión creada con ID: ${sessionId}`);
       
-      // Establecer cookie de sesión
-      res.cookie('sessionId', sessionId, {
+      // Establecer cookie de sesión manualmente
+      setCookie(res, 'sessionId', sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 24 * 60 * 60 * 1000 // 24 horas
+        maxAge: 24 * 60 * 60, // 24 horas en segundos
+        path: '/'
       });
       
       return res.json({ 
@@ -141,8 +171,9 @@ router.get('/google/callback', (req, res) => {
 router.get('/me', (req, res) => {
   logger.info('Auth /me endpoint called');
   
-  // Obtener sessionId de la cookie
-  const sessionId = req.cookies?.sessionId;
+  // Obtener sessionId de la cookie manualmente
+  const cookies = parseCookies(req.headers.cookie);
+  const sessionId = cookies.sessionId;
   logger.info(`📋 SessionId de cookie: ${sessionId}`);
   
   if (!sessionId) {
