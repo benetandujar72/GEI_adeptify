@@ -113,6 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(data.user);
+      
+      // Forzar recarga de la página para actualizar el estado completo
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 100);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error d\'inici de sessió');
       throw error;
