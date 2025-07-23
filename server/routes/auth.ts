@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import { logger } from '../utils/logger.js';
-import { db } from '../index.js';
-import { users } from '../../shared/schema.js';
-import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
 
 const router = Router();
+
+// TEMPORAL: Almacén de sesiones en memoria
+const sessionStore = new Map();
 
 // Login
 router.post('/login', async (req, res) => {
@@ -33,38 +32,40 @@ router.post('/login', async (req, res) => {
       
       logger.info('✅ Login exitoso para super admin');
       
-      // Establecer sesión
-      req.session.userId = 1;
-      req.session.userEmail = 'superadmin@gei.es';
-      req.session.userRole = 'super_admin';
+      // Generar session ID único
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Guardar sesión antes de responder
-      req.session.save((err) => {
-        if (err) {
-          logger.error('❌ Error guardando sesión:', err);
-          return res.status(500).json({ 
-            success: false,
-            message: 'Error al guardar la sesión' 
-          });
-        }
-        
-        logger.info('✅ Sesión guardada correctamente');
-        
-        return res.json({ 
-          success: true,
-          user: {
-            id: 1,
-            email: 'superadmin@gei.es',
-            displayName: 'Super Administrador',
-            firstName: 'Super',
-            lastName: 'Admin',
-            role: 'super_admin',
-            instituteId: null
-          }
-        });
+      // Crear sesión en nuestro almacén
+      const sessionData = {
+        userId: "1",
+        userEmail: 'superadmin@gei.es',
+        userRole: 'super_admin',
+        createdAt: new Date().toISOString()
+      };
+      
+      sessionStore.set(sessionId, sessionData);
+      logger.info(`✅ Sesión creada con ID: ${sessionId}`);
+      
+      // Establecer cookie de sesión
+      res.cookie('sessionId', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 horas
       });
       
-      return; // Importante: evitar continuar después de guardar sesión
+      return res.json({ 
+        success: true,
+        user: {
+          id: "1",
+          email: 'superadmin@gei.es',
+          displayName: 'Super Administrador',
+          firstName: 'Super',
+          lastName: 'Admin',
+          role: 'super_admin',
+          instituteId: null
+        }
+      });
     }
     
     // Para otros usuarios, devolver error temporal
@@ -139,33 +140,55 @@ router.get('/google/callback', (req, res) => {
 // Get current user
 router.get('/me', (req, res) => {
   logger.info('Auth /me endpoint called');
-  logger.info(`📋 Sesión: ${JSON.stringify({
-    userId: req.session.userId,
-    userEmail: req.session.userEmail,
-    userRole: req.session.userRole
-  })}`);
   
-  // Verificar si hay sesión activa
-  if (req.session.userId) {
-    logger.info('✅ Usuario autenticado encontrado en sesión');
-    return res.json({
-      user: {
-        id: req.session.userId.toString(),
-        email: req.session.userEmail || 'superadmin@gei.es',
-        displayName: 'Super Administrador',
-        firstName: 'Super',
-        lastName: 'Admin',
-        role: req.session.userRole || 'super_admin',
-        instituteId: null
-      }
+  // Obtener sessionId de la cookie
+  const sessionId = req.cookies?.sessionId;
+  logger.info(`📋 SessionId de cookie: ${sessionId}`);
+  
+  if (!sessionId) {
+    logger.info('❌ No hay sessionId en la cookie');
+    return res.status(401).json({ 
+      message: 'No autenticado - No sessionId',
+      sessionExists: false
     });
   }
   
-  logger.info('❌ No hay usuario autenticado en la sesión');
-  res.status(401).json({ 
-    message: 'No autenticado',
-    sessionExists: !!req.session,
-    sessionId: req.sessionID
+  // Buscar sesión en nuestro almacén
+  const sessionData = sessionStore.get(sessionId);
+  logger.info(`📋 Datos de sesión encontrados: ${JSON.stringify(sessionData)}`);
+  
+  if (!sessionData) {
+    logger.info('❌ Sesión no encontrada en el almacén');
+    return res.status(401).json({ 
+      message: 'No autenticado - Sesión no encontrada',
+      sessionId: sessionId
+    });
+  }
+  
+  // Verificar si la sesión no ha expirado (24 horas)
+  const sessionAge = Date.now() - new Date(sessionData.createdAt).getTime();
+  const maxAge = 24 * 60 * 60 * 1000; // 24 horas
+  
+  if (sessionAge > maxAge) {
+    logger.info('❌ Sesión expirada');
+    sessionStore.delete(sessionId);
+    return res.status(401).json({ 
+      message: 'Sesión expirada',
+      sessionId: sessionId
+    });
+  }
+  
+  logger.info('✅ Usuario autenticado encontrado en sesión');
+  return res.json({
+    user: {
+      id: sessionData.userId,
+      email: sessionData.userEmail,
+      displayName: 'Super Administrador',
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: sessionData.userRole,
+      instituteId: null
+    }
   });
 });
 

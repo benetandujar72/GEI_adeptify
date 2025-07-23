@@ -85,6 +85,7 @@
     "cmdk": "^1.1.1",
     "compression": "^1.7.4",
     "connect-pg-simple": "^10.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parse": "^5.6.0",
     "csv-stringify": "^6.5.2",
@@ -108,6 +109,7 @@
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
     "next-themes": "^0.4.6",
+    "node-fetch": "^3.3.2",
     "openai": "^4.102.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -129,7 +131,6 @@
     "vite-plugin-node-polyfills": "^0.23.0",
     "winston": "^3.11.0",
     "wouter": "^3.3.5",
-    "node-fetch": "^3.3.2",
     "ws": "^8.18.2",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"

@@ -4,6 +4,7 @@ import passport from 'passport';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -96,6 +97,9 @@ app.use((req, res, next) => {
 // Middleware de parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Middleware de cookies
+app.use(cookieParser());
 
 // Configuración de sesiones
 import connectPg from 'connect-pg-simple';
