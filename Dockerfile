@@ -52,17 +52,12 @@ RUN echo "=== Verificando copia de client/src ===" && \
     find . -name "Competencies.tsx" 2>/dev/null || echo "No se encontró Competencies.tsx en el sistema" && \
     find . -name "Guards.tsx" 2>/dev/null || echo "No se encontró Guards.tsx en el sistema"
 
-# Copiar archivos específicos directamente desde el contexto
-COPY client/src/pages/adeptify/Competencies.tsx ./client/src/pages/adeptify/Competencies.tsx
-COPY client/src/pages/adeptify/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
-COPY client/src/pages/adeptify/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
-COPY client/src/pages/adeptify/Evaluations.tsx ./client/src/pages/adeptify/Evaluations.tsx
-COPY client/src/pages/adeptify/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
-COPY client/src/pages/assistatut/Guards.tsx ./client/src/pages/assistatut/Guards.tsx
-COPY client/src/pages/assistatut/Attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
+# Copiar directorios específicos directamente
+COPY client/src/pages/adeptify ./client/src/pages/adeptify
+COPY client/src/pages/assistatut ./client/src/pages/assistatut
 
-# Verificar que los archivos se copiaron correctamente
-RUN echo "=== Verificando archivos copiados directamente ===" && \
+# Verificar que los directorios se copiaron correctamente
+RUN echo "=== Verificando directorios copiados directamente ===" && \
     ls -la client/src/pages/adeptify/ && \
     ls -la client/src/pages/assistatut/
 
