@@ -55,14 +55,19 @@ RUN echo "=== Creando directorios si no existen ===" && \
     ls -la client/src/pages/assistatut/
 
 # Copiar archivos específicos desde los directorios correctos (solo los que existen)
-COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
-COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
-COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
-COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
-COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
-
-# Verificar que los archivos se copiaron correctamente
-RUN echo "=== Verificando archivos copiados ===" && \
+# Nota: Los archivos ya están en client/src/pages/ desde la copia anterior
+# Solo necesitamos moverlos a las subcarpetas correctas
+RUN echo "=== Moviendo archivos a las subcarpetas correctas ===" && \
+    if [ -f "client/src/pages/CompetencySelector.tsx" ]; then \
+        cp client/src/pages/CompetencySelector.tsx client/src/pages/adeptify/Competencies.tsx; \
+    fi && \
+    if [ -f "client/src/pages/Statistics.tsx" ]; then \
+        cp client/src/pages/Statistics.tsx client/src/pages/adeptify/Statistics.tsx; \
+    fi && \
+    if [ -f "client/src/pages/EvaluationGrid.tsx" ]; then \
+        cp client/src/pages/EvaluationGrid.tsx client/src/pages/adeptify/Evaluations.tsx; \
+    fi && \
+    echo "=== Verificando archivos copiados ===" && \
     ls -la client/src/pages/adeptify/ && \
     ls -la client/src/pages/assistatut/
 
