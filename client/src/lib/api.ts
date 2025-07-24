@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // Create axios instance
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  // En producción, usar URL relativa (mismo dominio)
+  // En desarrollo, usar localhost
+  baseURL: import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:3001'),
   withCredentials: true, // Important for session cookies
   timeout: 10000,
 });

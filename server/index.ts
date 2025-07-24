@@ -60,7 +60,9 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'sha256-adZL5tq2getU14Zvm3HPDk7Uivy3/+4vhfw8OLrqKhY='"],
       scriptSrcAttr: ["'unsafe-inline'"],
-      connectSrc: ["'self'", "ws:", "wss:", "https://gei.adeptify.es", "https://gei-adeptify.onrender.com"],
+      connectSrc: process.env.NODE_ENV === 'production' 
+        ? ["'self'", "ws:", "wss:", "https://gei.adeptify.es", "https://gei-adeptify.onrender.com"]
+        : ["'self'", "ws:", "wss:", "http://localhost:3001", "http://localhost:3000"],
     },
   },
 }));
