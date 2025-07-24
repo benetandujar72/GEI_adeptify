@@ -33,7 +33,8 @@ export default defineConfig({
   },
   build: {
     outDir: '../dist/client',
-    sourcemap: true,
+    sourcemap: false, // Deshabilitar sourcemaps en producción
+    emptyOutDir: true, // Limpiar el directorio de salida
     rollupOptions: {
       output: {
         manualChunks: {
@@ -42,8 +43,16 @@ export default defineConfig({
         },
       },
     },
+    // Configuraciones adicionales para Docker
+    target: 'es2015',
+    minify: 'esbuild',
+    chunkSizeWarningLimit: 1000,
   },
   define: {
     'process.env': {},
   },
+  // Configuración para evitar problemas en Docker
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'wouter', '@tanstack/react-query', 'sonner']
+  }
 }); 
