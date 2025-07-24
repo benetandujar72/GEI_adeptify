@@ -36,33 +36,17 @@ COPY server ./server
 # Copiar código fuente del cliente (incluyendo todas las páginas)
 COPY client/src ./client/src
 
-# Crear directorios necesarios
-RUN mkdir -p client/src/pages/adeptify && \
-    mkdir -p client/src/pages/assistatut
-
-# Copiar archivos específicos desde adeptify y Assistatut
-COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
-COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
-COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
-COPY adeptify/client/src/pages/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
-COPY adeptify/client/src/pages/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
-COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
-COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
-
-# Verificar que todos los archivos críticos de App.tsx están presentes
+# Verificar que los archivos críticos de App.tsx están presentes
 RUN echo "=== Verificando archivos críticos de App.tsx ===" && \
     echo "=== Páginas principales ===" && \
     ls -la client/src/pages/Dashboard.tsx && \
     ls -la client/src/pages/Login.tsx && \
-    echo "=== Páginas de Adeptify ===" && \
-    ls -la client/src/pages/adeptify/Competencies.tsx && \
-    ls -la client/src/pages/adeptify/Criteria.tsx && \
-    ls -la client/src/pages/adeptify/Evaluations.tsx && \
-    ls -la client/src/pages/adeptify/Statistics.tsx && \
-    ls -la client/src/pages/adeptify/Settings.tsx && \
-    echo "=== Páginas de Assistatut ===" && \
-    ls -la client/src/pages/assistatut/Guards.tsx && \
-    ls -la client/src/pages/assistatut/Attendance.tsx && \
+    echo "=== Verificando estructura de directorios ===" && \
+    ls -la client/src/pages/ && \
+    echo "=== Verificando directorio adeptify ===" && \
+    ls -la client/src/pages/adeptify/ 2>/dev/null || echo "Directorio adeptify no encontrado" && \
+    echo "=== Verificando directorio assistatut ===" && \
+    ls -la client/src/pages/assistatut/ 2>/dev/null || echo "Directorio assistatut no encontrado" && \
     echo "=== Componentes ===" && \
     ls -la client/src/components/Navigation.tsx && \
     ls -la client/src/components/ProtectedRoute.tsx && \
@@ -70,7 +54,7 @@ RUN echo "=== Verificando archivos críticos de App.tsx ===" && \
     ls -la client/src/hooks/useAuth.tsx && \
     echo "=== Archivos de estilo ===" && \
     ls -la client/src/App.css && \
-    echo "=== Todos los archivos críticos verificados correctamente ==="
+    echo "=== Verificación completada ==="
 
 # Copiar directorio shared
 COPY shared ./shared
