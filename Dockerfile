@@ -15,8 +15,8 @@ COPY client/postcss.config.js client/tailwind.config.js client/tsconfig.node.jso
 COPY client/public ./client/public
 
 # Instalar dependencias con configuración optimizada
-RUN npm ci --only=production --ignore-scripts && \
-    npm ci --ignore-scripts && \
+RUN npm install --production --ignore-scripts && \
+    npm install --ignore-scripts && \
     npm cache clean --force
 
 # Copiar código fuente del servidor
