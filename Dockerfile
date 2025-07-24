@@ -36,6 +36,9 @@ COPY server ./server
 # Copiar código fuente del cliente (incluyendo todas las páginas)
 COPY client/src ./client/src
 
+# Copiar directorio shared
+COPY shared ./shared
+
 # Verificar que los archivos críticos estén presentes
 RUN echo "=== Verificando archivos críticos ===" && \
     ls -la tsconfig.json && \
@@ -52,7 +55,10 @@ RUN echo "=== Verificando archivos críticos ===" && \
     ls -la client/public/manifest.json && \
     ls -la client/public/logo.svg && \
     ls -la server/index.ts && \
-    ls -la client/src/App.tsx
+    ls -la client/src/App.tsx && \
+    echo "=== Verificando directorio shared ===" && \
+    ls -la shared/ && \
+    ls -la shared/schema.ts
 
 # Construir la aplicación con configuración optimizada
 RUN npm run build

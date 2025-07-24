@@ -1,4 +1,5 @@
 import * as esbuild from 'esbuild';
+import path from 'path';
 
 const externalDependencies = [
   // Dependencias de Node.js
@@ -40,5 +41,15 @@ esbuild.build({
   minify: false,
   sourcemap: false,
   target: 'node18',
-  logLevel: 'info'
+  logLevel: 'info',
+  alias: {
+    '@': path.resolve(process.cwd()),
+    '@/shared': path.resolve(process.cwd(), 'shared'),
+    '@/server': path.resolve(process.cwd(), 'server'),
+    '@/components': path.resolve(process.cwd(), 'client/src/components'),
+    '@/lib': path.resolve(process.cwd(), 'client/src/lib'),
+    '@/hooks': path.resolve(process.cwd(), 'client/src/hooks'),
+    '@/context': path.resolve(process.cwd(), 'client/src/context'),
+    '@/pages': path.resolve(process.cwd(), 'client/src/pages')
+  }
 }).catch(() => process.exit(1)); 
