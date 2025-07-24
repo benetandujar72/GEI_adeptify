@@ -30,8 +30,11 @@ RUN npm ci --only=production --ignore-scripts && \
     npm ci --ignore-scripts && \
     npm cache clean --force
 
-# Copiar código fuente
-COPY . .
+# Copiar código fuente del servidor
+COPY server ./server
+
+# Copiar código fuente del cliente (incluyendo todas las páginas)
+COPY client/src ./client/src
 
 # Verificar que los archivos críticos estén presentes
 RUN echo "=== Verificando archivos críticos ===" && \
@@ -49,7 +52,11 @@ RUN echo "=== Verificando archivos críticos ===" && \
     ls -la client/public/manifest.json && \
     ls -la client/public/logo.svg && \
     ls -la server/index.ts && \
-    ls -la client/src/App.tsx
+    ls -la client/src/App.tsx && \
+    echo "=== Verificando páginas de Adeptify ===" && \
+    ls -la client/src/pages/adeptify/ && \
+    echo "=== Verificando páginas de Assistatut ===" && \
+    ls -la client/src/pages/assistatut/
 
 # Construir la aplicación con configuración optimizada
 RUN npm run build
