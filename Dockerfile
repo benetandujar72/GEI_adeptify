@@ -49,16 +49,23 @@ RUN echo "=== Verificando copia de client/src ===" && \
     ls -la client/src/pages/adeptify/Competencies.tsx || echo "Competencies.tsx no encontrado" && \
     ls -la client/src/pages/assistatut/Guards.tsx || echo "Guards.tsx no encontrado"
 
-# Si los directorios críticos no existen, copiarlos específicamente
-RUN if [ ! -d "client/src/pages/adeptify" ]; then \
-        echo "=== Copiando directorio adeptify específicamente ===" && \
-        mkdir -p client/src/pages/adeptify && \
-        cp -r client/src/pages/adeptify/* client/src/pages/adeptify/ 2>/dev/null || echo "No se pudo copiar adeptify"; \
+# Copiar archivos específicos si los directorios están vacíos
+RUN echo "=== Verificando contenido de directorios ===" && \
+    ls -la client/src/pages/adeptify/ && \
+    ls -la client/src/pages/assistatut/ && \
+    echo "=== Copiando archivos específicos si es necesario ===" && \
+    if [ ! -f "client/src/pages/adeptify/Competencies.tsx" ]; then \
+        echo "Copiando archivos de adeptify..." && \
+        find . -name "Competencies.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Competencies.tsx"; \
+        find . -name "Settings.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Settings.tsx"; \
+        find . -name "Statistics.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Statistics.tsx"; \
+        find . -name "Evaluations.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Evaluations.tsx"; \
+        find . -name "Criteria.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Criteria.tsx"; \
     fi && \
-    if [ ! -d "client/src/pages/assistatut" ]; then \
-        echo "=== Copiando directorio assistatut específicamente ===" && \
-        mkdir -p client/src/pages/assistatut && \
-        cp -r client/src/pages/assistatut/* client/src/pages/assistatut/ 2>/dev/null || echo "No se pudo copiar assistatut"; \
+    if [ ! -f "client/src/pages/assistatut/Guards.tsx" ]; then \
+        echo "Copiando archivos de assistatut..." && \
+        find . -name "Guards.tsx" -exec cp {} client/src/pages/assistatut/ \; 2>/dev/null || echo "No se encontró Guards.tsx"; \
+        find . -name "Attendance.tsx" -exec cp {} client/src/pages/assistatut/ \; 2>/dev/null || echo "No se encontró Attendance.tsx"; \
     fi
 
 # Copiar directorio shared
