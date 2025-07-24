@@ -49,8 +49,11 @@ RUN echo "=== Verificando copia de client/src ===" && \
     ls -la client/src/pages/adeptify/Competencies.tsx || echo "Competencies.tsx no encontrado" && \
     ls -la client/src/pages/assistatut/Guards.tsx || echo "Guards.tsx no encontrado"
 
-# Copiar archivos específicos si los directorios están vacíos
-RUN echo "=== Verificando contenido de directorios ===" && \
+# Crear directorios si no existen y copiar archivos específicos
+RUN echo "=== Creando directorios si no existen ===" && \
+    mkdir -p client/src/pages/adeptify && \
+    mkdir -p client/src/pages/assistatut && \
+    echo "=== Verificando contenido de directorios ===" && \
     ls -la client/src/pages/adeptify/ && \
     ls -la client/src/pages/assistatut/ && \
     echo "=== Copiando archivos específicos si es necesario ===" && \
