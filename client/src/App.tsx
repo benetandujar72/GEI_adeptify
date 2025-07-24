@@ -3,17 +3,17 @@ import { Route, Switch, useLocation } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/hooks/useAuth.tsx';
-import Navigation from '@/components/Navigation';
-import Dashboard from '@/pages/Dashboard';
-import Competencies from '@/pages/adeptify/Competencies';
-import Criteria from '@/pages/adeptify/Criteria';
-import Evaluations from '@/pages/adeptify/Evaluations';
-import Statistics from '@/pages/adeptify/Statistics';
-import Settings from '@/pages/adeptify/Settings';
-import Guards from '@/pages/assistatut/Guards';
-import Attendance from '@/pages/assistatut/Attendance';
-import Login from '@/pages/Login';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import Navigation from '@/components/Navigation.tsx';
+import Dashboard from '@/pages/Dashboard.tsx';
+import Competencies from '@/pages/adeptify/Competencies.tsx';
+import Criteria from '@/pages/adeptify/Criteria.tsx';
+import Evaluations from '@/pages/adeptify/Evaluations.tsx';
+import Statistics from '@/pages/adeptify/Statistics.tsx';
+import Settings from '@/pages/adeptify/Settings.tsx';
+import Guards from '@/pages/assistatut/Guards.tsx';
+import Attendance from '@/pages/assistatut/Attendance.tsx';
+import Login from '@/pages/Login.tsx';
+import ProtectedRoute from '@/components/ProtectedRoute.tsx';
 import './App.css';
 
 // Create a client
