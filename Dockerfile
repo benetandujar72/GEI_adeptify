@@ -47,33 +47,24 @@ RUN echo "=== Verificando copia de client/src ===" && \
     ls -la client/src/pages/assistatut/ || echo "Directorio assistatut no encontrado" && \
     echo "=== Verificando archivos específicos ===" && \
     ls -la client/src/pages/adeptify/Competencies.tsx || echo "Competencies.tsx no encontrado" && \
-    ls -la client/src/pages/assistatut/Guards.tsx || echo "Guards.tsx no encontrado"
+    ls -la client/src/pages/assistatut/Guards.tsx || echo "Guards.tsx no encontrado" && \
+    echo "=== Buscando archivos en todo el sistema ===" && \
+    find . -name "Competencies.tsx" 2>/dev/null || echo "No se encontró Competencies.tsx en el sistema" && \
+    find . -name "Guards.tsx" 2>/dev/null || echo "No se encontró Guards.tsx en el sistema"
 
-# Crear directorios si no existen y copiar archivos específicos
-RUN echo "=== Creando directorios si no existen ===" && \
-    mkdir -p client/src/pages/adeptify && \
-    mkdir -p client/src/pages/assistatut && \
-    echo "=== Verificando contenido de directorios ===" && \
-    ls -la client/src/pages/adeptify/ && \
-    ls -la client/src/pages/assistatut/ && \
-    echo "=== Copiando archivos específicos si es necesario ===" && \
-    if [ ! -f "client/src/pages/adeptify/Competencies.tsx" ]; then \
-        echo "Copiando archivos de adeptify..." && \
-        cp client/src/pages/adeptify/Competencies.tsx client/src/pages/adeptify/ 2>/dev/null || echo "No se pudo copiar Competencies.tsx"; \
-        cp client/src/pages/adeptify/Settings.tsx client/src/pages/adeptify/ 2>/dev/null || echo "No se pudo copiar Settings.tsx"; \
-        cp client/src/pages/adeptify/Statistics.tsx client/src/pages/adeptify/ 2>/dev/null || echo "No se pudo copiar Statistics.tsx"; \
-        cp client/src/pages/adeptify/Evaluations.tsx client/src/pages/adeptify/ 2>/dev/null || echo "No se pudo copiar Evaluations.tsx"; \
-        cp client/src/pages/adeptify/Criteria.tsx client/src/pages/adeptify/ 2>/dev/null || echo "No se pudo copiar Criteria.tsx"; \
-        echo "=== Verificando archivos copiados de adeptify ===" && \
-        ls -la client/src/pages/adeptify/ || echo "Directorio adeptify vacío"; \
+# Copiar directorios específicos si no existen
+RUN echo "=== Copiando directorios específicos ===" && \
+    if [ ! -d "client/src/pages/adeptify" ] || [ -z "$(ls -A client/src/pages/adeptify 2>/dev/null)" ]; then \
+        echo "Copiando directorio adeptify..." && \
+        cp -r client/src/pages/adeptify client/src/pages/ 2>/dev/null || echo "No se pudo copiar directorio adeptify"; \
     fi && \
-    if [ ! -f "client/src/pages/assistatut/Guards.tsx" ]; then \
-        echo "Copiando archivos de assistatut..." && \
-        cp client/src/pages/assistatut/Guards.tsx client/src/pages/assistatut/ 2>/dev/null || echo "No se pudo copiar Guards.tsx"; \
-        cp client/src/pages/assistatut/Attendance.tsx client/src/pages/assistatut/ 2>/dev/null || echo "No se pudo copiar Attendance.tsx"; \
-        echo "=== Verificando archivos copiados de assistatut ===" && \
-        ls -la client/src/pages/assistatut/ || echo "Directorio assistatut vacío"; \
-    fi
+    if [ ! -d "client/src/pages/assistatut" ] || [ -z "$(ls -A client/src/pages/assistatut 2>/dev/null)" ]; then \
+        echo "Copiando directorio assistatut..." && \
+        cp -r client/src/pages/assistatut client/src/pages/ 2>/dev/null || echo "No se pudo copiar directorio assistatut"; \
+    fi && \
+    echo "=== Verificando contenido final de directorios ===" && \
+    ls -la client/src/pages/adeptify/ || echo "Directorio adeptify no existe o está vacío" && \
+    ls -la client/src/pages/assistatut/ || echo "Directorio assistatut no existe o está vacío"
 
 # Copiar directorio shared
 COPY shared ./shared
