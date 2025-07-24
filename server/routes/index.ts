@@ -12,6 +12,11 @@ import analyticsRoutes from './analytics.js';
 import aiRoutes from './ai.js';
 import adeptifyRoutes from './adeptify.js';
 import assistatutRoutes from './assistatut.js';
+import competencyRoutes from './competency.js';
+import guardAutomationRoutes from './guard-automation.js';
+import attendanceCoreRoutes from './attendance-core.js';
+import communicationRoutes from './communication.js';
+import scheduleRoutes from './schedule.js';
 
 /**
  * Configura todas las rutas de la API
@@ -37,6 +42,11 @@ export function setupRoutes(): Router {
   // Módulos específicos
   router.use('/adeptify', adeptifyRoutes);
   router.use('/assistatut', assistatutRoutes);
+  router.use('/competencies', competencyRoutes);
+  router.use('/guard-automation', guardAutomationRoutes);
+  router.use('/attendance', attendanceCoreRoutes);
+  router.use('/communication', communicationRoutes);
+  router.use('/schedule', scheduleRoutes);
 
   // Ruta de prueba
   router.get('/test', (req, res) => {

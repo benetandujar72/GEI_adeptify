@@ -195,6 +195,68 @@ export const criteria = pgTable("criteria", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Asignaturas
+export const subjects = pgTable("subjects", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  instituteId: uuid("institute_id").notNull().references(() => institutes.id, { onDelete: 'cascade' }),
+  academicYearId: uuid("academic_year_id").notNull().references(() => academicYears.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  code: text("code").notNull(),
+  description: text("description"),
+  credits: integer("credits"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Actividades/Salidas
+export const activities = pgTable("activities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  instituteId: uuid("institute_id").notNull().references(() => institutes.id, { onDelete: 'cascade' }),
+  academicYearId: uuid("academic_year_id").notNull().references(() => academicYears.id, { onDelete: 'cascade' }),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // excursion, activity, event, etc.
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  location: text("location"),
+  maxParticipants: integer("max_participants"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Supervisores de actividades
+export const activitySupervisors = pgTable("activity_supervisors", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  activityId: uuid("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
+  supervisorId: uuid("supervisor_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text("role").notNull(), // main, assistant, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Inscripciones a actividades
+export const activityEnrollments = pgTable("activity_enrollments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  activityId: uuid("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
+  studentId: uuid("student_id").notNull().references(() => students.id, { onDelete: 'cascade' }),
+  status: text("status").notNull().default('enrolled'), // enrolled, confirmed, cancelled
+  enrollmentDate: timestamp("enrollment_date").defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relación estudiantes-clases
+export const studentClasses = pgTable("student_classes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studentId: uuid("student_id").notNull().references(() => students.id, { onDelete: 'cascade' }),
+  classId: uuid("class_id").notNull().references(() => classes.id, { onDelete: 'cascade' }),
+  academicYearId: uuid("academic_year_id").notNull().references(() => academicYears.id, { onDelete: 'cascade' }),
+  enrollmentDate: timestamp("enrollment_date").defaultNow(),
+  status: text("status").notNull().default('active'), // active, inactive, graduated
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Estudiantes
 export const students = pgTable("students", {
   id: uuid("id").primaryKey().defaultRandom(),
