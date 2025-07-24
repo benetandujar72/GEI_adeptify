@@ -1,43 +1,33 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'superadmin' | 'institute_admin' | 'teacher' | 'student';
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requiredRole 
-}) => {
-  const { user, loading } = useAuth();
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
-  // Mostrar loading mientras se verifica la autenticación
-  if (loading) {
+  // Show loading spinner while checking authentication
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregant...</p>
+        </div>
       </div>
     );
   }
 
-  // Si no hay usuario, redirigir al login
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    setLocation('/login');
+    return null;
   }
 
-  // Si se requiere un rol específico, verificar que el usuario lo tenga
-  if (requiredRole) {
-    const hasRequiredRole = user.role === requiredRole;
-    
-    if (!hasRequiredRole) {
-      // Redirigir al dashboard si no tiene permisos
-      return <Navigate to="/dashboard" replace />;
-    }
-  }
-
+  // Render children if authenticated
   return <>{children}</>;
-};
-
-export default ProtectedRoute; 
+} 

@@ -17,6 +17,7 @@ import guardAutomationRoutes from './guard-automation.js';
 import attendanceCoreRoutes from './attendance-core.js';
 import communicationRoutes from './communication.js';
 import scheduleRoutes from './schedule.js';
+import dashboardRoutes from './dashboard.js';
 
 /**
  * Configura todas las rutas de la API
@@ -47,6 +48,7 @@ export function setupRoutes(): Router {
   router.use('/attendance', attendanceCoreRoutes);
   router.use('/communication', communicationRoutes);
   router.use('/schedule', scheduleRoutes);
+  router.use('/dashboard', dashboardRoutes);
 
   // Ruta de prueba
   router.get('/test', (req, res) => {
