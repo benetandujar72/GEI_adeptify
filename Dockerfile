@@ -36,6 +36,19 @@ COPY server ./server
 # Copiar código fuente del cliente (incluyendo todas las páginas)
 COPY client/src ./client/src
 
+# Crear directorios necesarios
+RUN mkdir -p client/src/pages/adeptify && \
+    mkdir -p client/src/pages/assistatut
+
+# Copiar archivos específicos desde adeptify y Assistatut
+COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
+COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
+COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
+COPY adeptify/client/src/pages/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
+COPY adeptify/client/src/pages/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
+COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
+COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
+
 # Verificar que todos los archivos críticos de App.tsx están presentes
 RUN echo "=== Verificando archivos críticos de App.tsx ===" && \
     echo "=== Páginas principales ===" && \
