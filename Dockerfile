@@ -36,40 +36,17 @@ COPY server ./server
 # Copiar código fuente del cliente (incluyendo todas las páginas)
 COPY client/src ./client/src
 
-# Verificar que el directorio pages se copió correctamente
-RUN echo "=== Verificando copia de client/src ===" && \
-    ls -la client/src/ && \
-    echo "=== Verificando copia de client/src/pages ===" && \
+# Verificar que los archivos están en las ubicaciones correctas
+RUN echo "=== Verificando estructura de archivos ===" && \
     ls -la client/src/pages/ && \
-    echo "=== Verificando copia de client/src/pages/adeptify ===" && \
-    ls -la client/src/pages/adeptify/ || echo "Directorio adeptify no encontrado" && \
-    echo "=== Verificando copia de client/src/pages/assistatut ===" && \
-    ls -la client/src/pages/assistatut/ || echo "Directorio assistatut no encontrado"
-
-# Crear directorios si no existen
-RUN echo "=== Creando directorios si no existen ===" && \
-    mkdir -p client/src/pages/adeptify && \
-    mkdir -p client/src/pages/assistatut && \
-    echo "=== Verificando contenido de directorios ===" && \
+    echo "=== Verificando archivos en adeptify ===" && \
     ls -la client/src/pages/adeptify/ && \
-    ls -la client/src/pages/assistatut/
-
-# Copiar archivos específicos desde los directorios correctos (solo los que existen)
-# Nota: Los archivos ya están en client/src/pages/ desde la copia anterior
-# Solo necesitamos moverlos a las subcarpetas correctas
-RUN echo "=== Moviendo archivos a las subcarpetas correctas ===" && \
-    if [ -f "client/src/pages/CompetencySelector.tsx" ]; then \
-        cp client/src/pages/CompetencySelector.tsx client/src/pages/adeptify/Competencies.tsx; \
-    fi && \
-    if [ -f "client/src/pages/Statistics.tsx" ]; then \
-        cp client/src/pages/Statistics.tsx client/src/pages/adeptify/Statistics.tsx; \
-    fi && \
-    if [ -f "client/src/pages/EvaluationGrid.tsx" ]; then \
-        cp client/src/pages/EvaluationGrid.tsx client/src/pages/adeptify/Evaluations.tsx; \
-    fi && \
-    echo "=== Verificando archivos copiados ===" && \
-    ls -la client/src/pages/adeptify/ && \
-    ls -la client/src/pages/assistatut/
+    echo "=== Verificando archivos en assistatut ===" && \
+    ls -la client/src/pages/assistatut/ && \
+    echo "=== Verificando archivos críticos ===" && \
+    ls -la client/src/pages/adeptify/Competencies.tsx && \
+    ls -la client/src/pages/adeptify/Statistics.tsx && \
+    ls -la client/src/pages/adeptify/Evaluations.tsx
 
 # Copiar directorio shared
 COPY shared ./shared
@@ -93,11 +70,7 @@ RUN echo "=== Verificando archivos críticos ===" && \
     ls -la client/src/App.tsx && \
     echo "=== Verificando directorio shared ===" && \
     ls -la shared/ && \
-    ls -la shared/schema.ts && \
-    echo "=== Verificando directorio client/src/pages/adeptify ===" && \
-    ls -la client/src/pages/ && \
-    ls -la client/src/pages/adeptify/ && \
-    ls -la client/src/pages/adeptify/Competencies.tsx || echo "Competencies.tsx no encontrado en verificación final"
+    ls -la shared/schema.ts
 
 # Construir la aplicación con configuración optimizada
 RUN npm run build
