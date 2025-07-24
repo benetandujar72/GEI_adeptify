@@ -31,7 +31,7 @@ import { logger } from './utils/logger.js';
 // Configuración de la aplicación
 const app = express();
 const server = createServer(app);
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 // Configuración de base de datos
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';

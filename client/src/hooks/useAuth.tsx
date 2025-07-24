@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
 interface User {
@@ -38,10 +38,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('Checking auth status...');
       const response = await api.get('/api/auth/me');
+      console.log('Auth check successful:', response.data);
       setUser(response.data.user);
-    } catch (error) {
+    } catch (error: any) {
+      console.log('Auth check failed:', error.response?.status, error.message);
       setUser(null);
+      // Clear any invalid tokens
+      localStorage.removeItem('auth_token');
+      delete api.defaults.headers.common['Authorization'];
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log('Attempting login...');
       const response = await api.post('/api/auth/login', { email, password });
+      console.log('Login successful:', response.data);
       setUser(response.data.user);
       
       // Store auth token if provided
@@ -59,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       }
     } catch (error: any) {
+      console.error('Login failed:', error.response?.data || error.message);
       throw new Error(error.response?.data?.error || 'Error d\'inici de sessió');
     } finally {
       setIsLoading(false);
@@ -67,26 +76,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = async () => {
     try {
+      console.log('Redirecting to Google OAuth...');
       // Redirect to Google OAuth
       window.location.href = '/api/auth/google';
     } catch (error: any) {
+      console.error('Google login failed:', error);
       throw new Error('Error iniciant sessió amb Google');
     }
   };
 
   const logout = async () => {
     try {
+      console.log('Logging out...');
       await api.post('/api/auth/logout');
     } catch (error) {
+      console.error('Logout API call failed:', error);
       // Continue with logout even if API call fails
     } finally {
       setUser(null);
       localStorage.removeItem('auth_token');
       delete api.defaults.headers.common['Authorization'];
+      console.log('Logout completed');
     }
   };
 
   const refreshUser = async () => {
+    console.log('Refreshing user data...');
     await checkAuthStatus();
   };
 

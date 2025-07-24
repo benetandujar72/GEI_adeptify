@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
   withCredentials: true, // Important for session cookies
   timeout: 10000,
 });
@@ -15,9 +15,17 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Log request for debugging
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+      headers: config.headers,
+      data: config.data
+    });
+    
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -25,14 +33,30 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    // Log successful response for debugging
+    console.log(`API Response: ${response.status} ${response.config.url}`, response.data);
     return response;
   },
   (error) => {
+    // Log error response for debugging
+    console.error('API Response Error:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      data: error.response?.data,
+      message: error.message
+    });
+    
     // Handle authentication errors
     if (error.response?.status === 401) {
+      console.log('Unauthorized - clearing auth token');
       // Clear auth token and redirect to login
       localStorage.removeItem('auth_token');
-      window.location.href = '/login';
+      delete api.defaults.headers.common['Authorization'];
+      
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     
     // Handle other errors

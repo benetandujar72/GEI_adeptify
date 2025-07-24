@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Switch } from 'wouter';
+import { Route, Switch, useLocation } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './hooks/useAuth.tsx';
@@ -26,6 +26,27 @@ const queryClient = new QueryClient({
   },
 });
 
+// Layout component for protected routes
+const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex">
+    <Navigation />
+    <div className="flex-1 lg:pl-64">
+      <main className="min-h-screen bg-gray-50 p-6">
+        {children}
+      </main>
+    </div>
+  </div>
+);
+
+// Default redirect component
+const DefaultRedirect = () => {
+  const [, setLocation] = useLocation();
+  React.useEffect(() => {
+    setLocation('/');
+  }, [setLocation]);
+  return null;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -49,120 +70,71 @@ function App() {
             {/* Protected routes */}
             <Route path="/">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Dashboard />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Dashboard />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             <Route path="/adeptify/competencies">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Competencies />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Competencies />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             <Route path="/adeptify/competencies/:id/criteria">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Criteria />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Criteria />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             <Route path="/adeptify/evaluations">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Evaluations />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Evaluations />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             <Route path="/adeptify/statistics">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Statistics />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Statistics />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             <Route path="/adeptify/settings">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Settings />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Settings />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             <Route path="/assistatut/guards">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Guards />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Guards />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             <Route path="/assistatut/attendance">
               <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Attendance />
-                    </main>
-                  </div>
-                </div>
+                <ProtectedLayout>
+                  <Attendance />
+                </ProtectedLayout>
               </ProtectedRoute>
             </Route>
             
             {/* Default redirect to dashboard */}
             <Route>
-              <ProtectedRoute>
-                <div className="flex">
-                  <Navigation />
-                  <div className="flex-1 lg:pl-64">
-                    <main className="min-h-screen bg-gray-50 p-6">
-                      <Dashboard />
-                    </main>
-                  </div>
-                </div>
-              </ProtectedRoute>
+              <DefaultRedirect />
             </Route>
           </Switch>
         </div>
