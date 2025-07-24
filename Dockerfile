@@ -44,15 +44,9 @@ RUN echo "=== Verificando copia de client/src ===" && \
     echo "=== Verificando copia de client/src/pages/adeptify ===" && \
     ls -la client/src/pages/adeptify/ || echo "Directorio adeptify no encontrado" && \
     echo "=== Verificando copia de client/src/pages/assistatut ===" && \
-    ls -la client/src/pages/assistatut/ || echo "Directorio assistatut no encontrado" && \
-    echo "=== Verificando archivos específicos ===" && \
-    ls -la client/src/pages/adeptify/Competencies.tsx || echo "Competencies.tsx no encontrado" && \
-    ls -la client/src/pages/assistatut/Guards.tsx || echo "Guards.tsx no encontrado" && \
-    echo "=== Buscando archivos en todo el sistema ===" && \
-    find . -name "Competencies.tsx" 2>/dev/null || echo "No se encontró Competencies.tsx en el sistema" && \
-    find . -name "Guards.tsx" 2>/dev/null || echo "No se encontró Guards.tsx en el sistema"
+    ls -la client/src/pages/assistatut/ || echo "Directorio assistatut no encontrado"
 
-# Crear directorios si no existen y copiar archivos específicos
+# Crear directorios si no existen
 RUN echo "=== Creando directorios si no existen ===" && \
     mkdir -p client/src/pages/adeptify && \
     mkdir -p client/src/pages/assistatut && \
@@ -60,12 +54,10 @@ RUN echo "=== Creando directorios si no existen ===" && \
     ls -la client/src/pages/adeptify/ && \
     ls -la client/src/pages/assistatut/
 
-# Copiar archivos específicos desde los directorios correctos
+# Copiar archivos específicos desde los directorios correctos (solo los que existen)
 COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
-COPY adeptify/client/src/pages/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
 COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
 COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
-COPY adeptify/client/src/pages/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
 COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
 COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
 
