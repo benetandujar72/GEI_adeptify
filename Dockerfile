@@ -58,7 +58,11 @@ RUN echo "=== Verificando archivos críticos ===" && \
     ls -la client/src/App.tsx && \
     echo "=== Verificando directorio shared ===" && \
     ls -la shared/ && \
-    ls -la shared/schema.ts
+    ls -la shared/schema.ts && \
+    echo "=== Verificando directorio client/src/pages/adeptify ===" && \
+    ls -la client/src/pages/ && \
+    ls -la client/src/pages/adeptify/ && \
+    ls -la client/src/pages/adeptify/Competencies.tsx
 
 # Construir la aplicación con configuración optimizada
 RUN npm run build
