@@ -36,17 +36,28 @@ COPY server ./server
 # Copiar código fuente del cliente (incluyendo todas las páginas)
 COPY client/src ./client/src
 
-# Verificar que los archivos están en las ubicaciones correctas
-RUN echo "=== Verificando estructura de archivos ===" && \
-    ls -la client/src/pages/ && \
-    echo "=== Verificando archivos en adeptify ===" && \
-    ls -la client/src/pages/adeptify/ && \
-    echo "=== Verificando archivos en assistatut ===" && \
-    ls -la client/src/pages/assistatut/ && \
-    echo "=== Verificando archivos críticos ===" && \
+# Verificar que todos los archivos críticos de App.tsx están presentes
+RUN echo "=== Verificando archivos críticos de App.tsx ===" && \
+    echo "=== Páginas principales ===" && \
+    ls -la client/src/pages/Dashboard.tsx && \
+    ls -la client/src/pages/Login.tsx && \
+    echo "=== Páginas de Adeptify ===" && \
     ls -la client/src/pages/adeptify/Competencies.tsx && \
+    ls -la client/src/pages/adeptify/Criteria.tsx && \
+    ls -la client/src/pages/adeptify/Evaluations.tsx && \
     ls -la client/src/pages/adeptify/Statistics.tsx && \
-    ls -la client/src/pages/adeptify/Evaluations.tsx
+    ls -la client/src/pages/adeptify/Settings.tsx && \
+    echo "=== Páginas de Assistatut ===" && \
+    ls -la client/src/pages/assistatut/Guards.tsx && \
+    ls -la client/src/pages/assistatut/Attendance.tsx && \
+    echo "=== Componentes ===" && \
+    ls -la client/src/components/Navigation.tsx && \
+    ls -la client/src/components/ProtectedRoute.tsx && \
+    echo "=== Hooks ===" && \
+    ls -la client/src/hooks/useAuth.tsx && \
+    echo "=== Archivos de estilo ===" && \
+    ls -la client/src/App.css && \
+    echo "=== Todos los archivos críticos verificados correctamente ==="
 
 # Copiar directorio shared
 COPY shared ./shared
