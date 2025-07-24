@@ -52,12 +52,25 @@ RUN echo "=== Verificando copia de client/src ===" && \
     find . -name "Competencies.tsx" 2>/dev/null || echo "No se encontró Competencies.tsx en el sistema" && \
     find . -name "Guards.tsx" 2>/dev/null || echo "No se encontró Guards.tsx en el sistema"
 
-# Copiar directorios específicos directamente
-COPY client/src/pages/adeptify ./client/src/pages/adeptify
-COPY client/src/pages/assistatut ./client/src/pages/assistatut
+# Crear directorios si no existen y copiar archivos específicos
+RUN echo "=== Creando directorios si no existen ===" && \
+    mkdir -p client/src/pages/adeptify && \
+    mkdir -p client/src/pages/assistatut && \
+    echo "=== Verificando contenido de directorios ===" && \
+    ls -la client/src/pages/adeptify/ && \
+    ls -la client/src/pages/assistatut/
 
-# Verificar que los directorios se copiaron correctamente
-RUN echo "=== Verificando directorios copiados directamente ===" && \
+# Copiar archivos específicos desde el contexto de Docker
+COPY client/src/pages/adeptify/Competencies.tsx ./client/src/pages/adeptify/Competencies.tsx
+COPY client/src/pages/adeptify/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
+COPY client/src/pages/adeptify/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
+COPY client/src/pages/adeptify/Evaluations.tsx ./client/src/pages/adeptify/Evaluations.tsx
+COPY client/src/pages/adeptify/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
+COPY client/src/pages/assistatut/Guards.tsx ./client/src/pages/assistatut/Guards.tsx
+COPY client/src/pages/assistatut/Attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
+
+# Verificar que los archivos se copiaron correctamente
+RUN echo "=== Verificando archivos copiados ===" && \
     ls -la client/src/pages/adeptify/ && \
     ls -la client/src/pages/assistatut/
 
