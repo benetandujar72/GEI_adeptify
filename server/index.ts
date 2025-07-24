@@ -198,11 +198,11 @@ if (process.env.NODE_ENV === 'production') {
   
   // Intentar múltiples rutas posibles para los archivos estáticos
   const possiblePaths = [
+    path.join(process.cwd(), 'client/dist'),  // Docker production path
     path.join(__dirname, '../client/dist'),
     path.join(__dirname, '../../client/dist'),
     path.join(__dirname, '../dist/client'),
     path.join(__dirname, './client/dist'),
-    path.join(process.cwd(), 'client/dist'),
     path.join(process.cwd(), 'dist/client'),
     path.join(process.cwd(), 'dist')
   ];
@@ -313,9 +313,28 @@ if (process.env.NODE_ENV === 'production') {
       }
     });
     
+    // Middleware específico para archivos de assets
+    app.use('/assets', express.static(path.join(staticPath, 'assets')));
+    
+    // Middleware general para archivos estáticos
     app.use(express.static(staticPath));
+    
     logger.info('✅ ===== MIDDLEWARE DE ARCHIVOS ESTÁTICOS CONFIGURADO =====');
     logger.info(`📂 Ruta configurada: ${staticPath}`);
+    logger.info(`📂 Ruta de assets: ${path.join(staticPath, 'assets')}`);
+    
+    // Verificar que los archivos de assets existen
+    const assetsPath = path.join(staticPath, 'assets');
+    if (fs.existsSync(assetsPath)) {
+      try {
+        const assetFiles = fs.readdirSync(assetsPath);
+        logger.info(`📋 Archivos en assets: ${assetFiles.join(', ')}`);
+      } catch (error) {
+        logger.error('❌ Error leyendo directorio assets:', error);
+      }
+    } else {
+      logger.error(`❌ Directorio assets no encontrado: ${assetsPath}`);
+    }
   }
 }
 
