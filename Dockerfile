@@ -60,8 +60,14 @@ RUN echo "=== Creando directorios si no existen ===" && \
     ls -la client/src/pages/adeptify/ && \
     ls -la client/src/pages/assistatut/
 
-# Los archivos ya están incluidos en client/src/pages/adeptify y client/src/pages/assistatut
-# No es necesario copiarlos desde directorios externos
+# Copiar archivos específicos desde los directorios correctos
+COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
+COPY adeptify/client/src/pages/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
+COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
+COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
+COPY adeptify/client/src/pages/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
+COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
+COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
 
 # Verificar que los archivos se copiaron correctamente
 RUN echo "=== Verificando archivos copiados ===" && \
