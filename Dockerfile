@@ -60,14 +60,12 @@ RUN echo "=== Creando directorios si no existen ===" && \
     ls -la client/src/pages/adeptify/ && \
     ls -la client/src/pages/assistatut/
 
-# Copiar archivos específicos desde el contexto de Docker
-COPY client/src/pages/adeptify/Competencies.tsx ./client/src/pages/adeptify/Competencies.tsx
-COPY client/src/pages/adeptify/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
-COPY client/src/pages/adeptify/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
-COPY client/src/pages/adeptify/Evaluations.tsx ./client/src/pages/adeptify/Evaluations.tsx
-COPY client/src/pages/adeptify/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
-COPY client/src/pages/assistatut/Guards.tsx ./client/src/pages/assistatut/Guards.tsx
-COPY client/src/pages/assistatut/Attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
+# Copiar archivos específicos desde los directorios correctos
+COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
+COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
+COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
+COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
+COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
 
 # Verificar que los archivos se copiaron correctamente
 RUN echo "=== Verificando archivos copiados ===" && \
