@@ -7,22 +7,11 @@ RUN apk add --no-cache libc6-compat
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración
-COPY package*.json ./
-COPY tsconfig.json ./
-COPY drizzle.config.ts ./
-COPY tailwind.config.ts ./
-COPY postcss.config.js ./
-COPY vite.config.ts ./
-COPY esbuild.config.js ./
+# Copiar archivos de configuración en una sola capa
+COPY package*.json tsconfig.json drizzle.config.ts tailwind.config.ts postcss.config.js vite.config.ts esbuild.config.js ./
 
-# Copiar archivos de configuración del cliente
-COPY client/postcss.config.js ./client/
-COPY client/tailwind.config.js ./client/
-COPY client/tsconfig.node.json ./client/
-COPY client/tsconfig.json ./client/
-COPY client/vite.config.ts ./client/
-COPY client/index.html ./client/
+# Copiar archivos de configuración del cliente en una sola capa
+COPY client/postcss.config.js client/tailwind.config.js client/tsconfig.node.json client/tsconfig.json client/vite.config.ts client/index.html ./client/
 COPY client/public ./client/public
 
 # Instalar dependencias con configuración optimizada
@@ -33,73 +22,60 @@ RUN npm ci --only=production --ignore-scripts && \
 # Copiar código fuente del servidor
 COPY server ./server
 
-# Copiar código fuente del cliente (incluyendo todas las páginas)
+# Copiar código fuente del cliente
 COPY client/src ./client/src
 
-# Crear directorios necesarios y copiar archivos específicos
-RUN mkdir -p client/src/pages/adeptify && \
-    mkdir -p client/src/pages/assistatut
+# Crear directorios necesarios y copiar archivos específicos en una sola capa
+RUN mkdir -p client/src/pages/adeptify client/src/pages/assistatut && \
+    echo "=== Directorios creados ===" && \
+    ls -la client/src/pages/
 
-# Copiar archivos desde adeptify
+# Copiar archivos desde adeptify y Assistatut en una sola capa
 COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
 COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
 COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
 COPY adeptify/client/src/pages/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
 COPY adeptify/client/src/pages/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
-
-# Copiar archivos desde Assistatut
 COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
 COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
 
-# Verificar que los archivos críticos de App.tsx están presentes
-RUN echo "=== Verificando archivos críticos de App.tsx ===" && \
-    echo "=== Páginas principales ===" && \
-    ls -la client/src/pages/Dashboard.tsx && \
-    ls -la client/src/pages/Login.tsx && \
-    echo "=== Verificando estructura de directorios ===" && \
-    ls -la client/src/pages/ && \
-    echo "=== Verificando directorio adeptify ===" && \
+# Verificar que todos los archivos críticos están presentes
+RUN echo "=== Verificación completa de archivos críticos ===" && \
+    echo "✅ Páginas principales:" && \
+    ls -la client/src/pages/Dashboard.tsx client/src/pages/Login.tsx && \
+    echo "✅ Directorio adeptify:" && \
     ls -la client/src/pages/adeptify/ && \
-    echo "=== Verificando directorio assistatut ===" && \
+    echo "✅ Directorio assistatut:" && \
     ls -la client/src/pages/assistatut/ && \
-    echo "=== Componentes ===" && \
-    ls -la client/src/components/Navigation.tsx && \
-    ls -la client/src/components/ProtectedRoute.tsx && \
-    echo "=== Hooks ===" && \
+    echo "✅ Componentes:" && \
+    ls -la client/src/components/Navigation.tsx client/src/components/ProtectedRoute.tsx && \
+    echo "✅ Hooks:" && \
     ls -la client/src/hooks/useAuth.tsx && \
-    echo "=== Archivos de estilo ===" && \
+    echo "✅ Archivos de estilo:" && \
     ls -la client/src/App.css && \
-    echo "=== Verificación completada ==="
+    echo "✅ Todos los archivos críticos verificados correctamente"
 
 # Copiar directorio shared
 COPY shared ./shared
 
-# Verificar que los archivos críticos estén presentes
-RUN echo "=== Verificando archivos críticos ===" && \
-    ls -la tsconfig.json && \
-    ls -la esbuild.config.js && \
-    ls -la vite.config.ts && \
-    ls -la tailwind.config.ts && \
-    ls -la postcss.config.js && \
-    ls -la client/postcss.config.js && \
-    ls -la client/tailwind.config.js && \
-    ls -la client/tsconfig.node.json && \
-    ls -la client/tsconfig.json && \
-    ls -la client/vite.config.ts && \
-    ls -la client/index.html && \
-    ls -la client/public/manifest.json && \
-    ls -la client/public/logo.svg && \
-    ls -la server/index.ts && \
-    ls -la client/src/App.tsx && \
-    echo "=== Verificando directorio shared ===" && \
-    ls -la shared/ && \
-    ls -la shared/schema.ts
+# Verificar archivos de configuración críticos
+RUN echo "=== Verificando archivos de configuración ===" && \
+    ls -la tsconfig.json esbuild.config.js vite.config.ts tailwind.config.ts postcss.config.js && \
+    ls -la client/postcss.config.js client/tailwind.config.js client/tsconfig.node.json client/tsconfig.json client/vite.config.ts client/index.html && \
+    ls -la client/public/manifest.json client/public/logo.svg server/index.ts client/src/App.tsx && \
+    ls -la shared/schema.ts && \
+    echo "✅ Todos los archivos de configuración verificados"
 
-# Construir la aplicación con configuración optimizada
-RUN npm run build
+# Construir la aplicación
+RUN echo "=== Iniciando build de la aplicación ===" && \
+    npm run build && \
+    echo "✅ Build completado exitosamente"
 
 # Verificar que el build se completó correctamente
-RUN ls -la dist/ && echo "=== Client build ===" && ls -la dist/client/ || echo "Client dist no existe"
+RUN echo "=== Verificando resultados del build ===" && \
+    ls -la dist/ && \
+    ls -la dist/client/ && \
+    echo "✅ Build verificado correctamente"
 
 # Imagen de producción
 FROM node:18-alpine AS production
@@ -108,8 +84,8 @@ FROM node:18-alpine AS production
 RUN apk add --no-cache libc6-compat
 
 # Crear usuario no-root
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -126,25 +102,15 @@ COPY --from=base /app/dist ./dist
 COPY --from=base /app/dist/client ./client/dist
 COPY --from=base /app/shared ./shared
 
-# Verificar que los archivos se copiaron correctamente
-RUN echo "=== Verificando archivos copiados ===" && \
-    ls -la dist/ && \
-    echo "=== Client files ===" && \
-    ls -la client/dist/ || echo "Client dist no existe"
-
-# Copiar todos los scripts necesarios
+# Copiar scripts y archivos de configuración necesarios
 COPY --from=base /app/scripts ./scripts
-RUN chmod +x ./scripts/*.sh
-
-# Copiar archivos de configuración necesarios
 COPY --from=base /app/drizzle.config.ts ./
 COPY --from=base /app/render.yaml ./
-
-# Copiar archivos de migración
 COPY --from=base /app/drizzle ./drizzle
 
-# Cambiar propietario de los archivos
-RUN chown -R nextjs:nodejs /app
+# Configurar permisos
+RUN chmod +x ./scripts/*.sh && \
+    chown -R nextjs:nodejs /app
 
 # Cambiar al usuario no-root
 USER nextjs
