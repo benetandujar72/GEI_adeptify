@@ -36,6 +36,21 @@ COPY server ./server
 # Copiar código fuente del cliente (incluyendo todas las páginas)
 COPY client/src ./client/src
 
+# Crear directorios necesarios y copiar archivos específicos
+RUN mkdir -p client/src/pages/adeptify && \
+    mkdir -p client/src/pages/assistatut
+
+# Copiar archivos desde adeptify
+COPY adeptify/client/src/pages/CompetencySelector.tsx ./client/src/pages/adeptify/Competencies.tsx
+COPY adeptify/client/src/pages/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
+COPY adeptify/client/src/pages/EvaluationGrid.tsx ./client/src/pages/adeptify/Evaluations.tsx
+COPY adeptify/client/src/pages/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
+COPY adeptify/client/src/pages/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
+
+# Copiar archivos desde Assistatut
+COPY Assistatut/client/src/pages/guard-duties.tsx ./client/src/pages/assistatut/Guards.tsx
+COPY Assistatut/client/src/pages/hourly-attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
+
 # Verificar que los archivos críticos de App.tsx están presentes
 RUN echo "=== Verificando archivos críticos de App.tsx ===" && \
     echo "=== Páginas principales ===" && \
@@ -44,9 +59,9 @@ RUN echo "=== Verificando archivos críticos de App.tsx ===" && \
     echo "=== Verificando estructura de directorios ===" && \
     ls -la client/src/pages/ && \
     echo "=== Verificando directorio adeptify ===" && \
-    ls -la client/src/pages/adeptify/ 2>/dev/null || echo "Directorio adeptify no encontrado" && \
+    ls -la client/src/pages/adeptify/ && \
     echo "=== Verificando directorio assistatut ===" && \
-    ls -la client/src/pages/assistatut/ 2>/dev/null || echo "Directorio assistatut no encontrado" && \
+    ls -la client/src/pages/assistatut/ && \
     echo "=== Componentes ===" && \
     ls -la client/src/components/Navigation.tsx && \
     ls -la client/src/components/ProtectedRoute.tsx && \
