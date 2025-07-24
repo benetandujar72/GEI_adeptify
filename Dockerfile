@@ -64,11 +64,15 @@ RUN echo "=== Creando directorios si no existen ===" && \
         find . -name "Statistics.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Statistics.tsx"; \
         find . -name "Evaluations.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Evaluations.tsx"; \
         find . -name "Criteria.tsx" -exec cp {} client/src/pages/adeptify/ \; 2>/dev/null || echo "No se encontró Criteria.tsx"; \
+        echo "=== Verificando archivos copiados de adeptify ===" && \
+        ls -la client/src/pages/adeptify/ || echo "Directorio adeptify vacío"; \
     fi && \
     if [ ! -f "client/src/pages/assistatut/Guards.tsx" ]; then \
         echo "Copiando archivos de assistatut..." && \
         find . -name "Guards.tsx" -exec cp {} client/src/pages/assistatut/ \; 2>/dev/null || echo "No se encontró Guards.tsx"; \
         find . -name "Attendance.tsx" -exec cp {} client/src/pages/assistatut/ \; 2>/dev/null || echo "No se encontró Attendance.tsx"; \
+        echo "=== Verificando archivos copiados de assistatut ===" && \
+        ls -la client/src/pages/assistatut/ || echo "Directorio assistatut vacío"; \
     fi
 
 # Copiar directorio shared
@@ -97,7 +101,7 @@ RUN echo "=== Verificando archivos críticos ===" && \
     echo "=== Verificando directorio client/src/pages/adeptify ===" && \
     ls -la client/src/pages/ && \
     ls -la client/src/pages/adeptify/ && \
-    ls -la client/src/pages/adeptify/Competencies.tsx
+    ls -la client/src/pages/adeptify/Competencies.tsx || echo "Competencies.tsx no encontrado en verificación final"
 
 # Construir la aplicación con configuración optimizada
 RUN npm run build
