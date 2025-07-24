@@ -52,11 +52,7 @@ RUN echo "=== Verificando archivos críticos ===" && \
     ls -la client/public/manifest.json && \
     ls -la client/public/logo.svg && \
     ls -la server/index.ts && \
-    ls -la client/src/App.tsx && \
-    echo "=== Verificando páginas de Adeptify ===" && \
-    ls -la client/src/pages/adeptify/ && \
-    echo "=== Verificando páginas de Assistatut ===" && \
-    ls -la client/src/pages/assistatut/
+    ls -la client/src/App.tsx
 
 # Construir la aplicación con configuración optimizada
 RUN npm run build
