@@ -36,6 +36,14 @@ COPY server ./server
 # Copiar código fuente del cliente (incluyendo todas las páginas)
 COPY client/src ./client/src
 
+# Verificar que el directorio pages se copió correctamente
+RUN echo "=== Verificando copia de client/src ===" && \
+    ls -la client/src/ && \
+    echo "=== Verificando copia de client/src/pages ===" && \
+    ls -la client/src/pages/ && \
+    echo "=== Verificando copia de client/src/pages/adeptify ===" && \
+    ls -la client/src/pages/adeptify/ || echo "Directorio adeptify no encontrado"
+
 # Copiar directorio shared
 COPY shared ./shared
 
