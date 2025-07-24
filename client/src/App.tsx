@@ -12,6 +12,7 @@ import Statistics from '@/pages/adeptify/Statistics.tsx';
 import Settings from '@/pages/adeptify/Settings.tsx';
 import Guards from '@/pages/assistatut/Guards.tsx';
 import Attendance from '@/pages/assistatut/Attendance.tsx';
+import CalendarPage from '@/pages/calendar/CalendarPage.tsx';
 import Login from '@/pages/Login.tsx';
 import ProtectedRoute from '@/components/ProtectedRoute.tsx';
 import './App.css';
@@ -128,6 +129,14 @@ function App() {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <Attendance />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/calendar">
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <CalendarPage />
                 </ProtectedLayout>
               </ProtectedRoute>
             </Route>

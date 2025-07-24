@@ -25,8 +25,16 @@ import { initializeDatabase } from './database/init.js';
 import { setupPassport } from './auth/passport.js';
 import { setupRoutes } from './routes/index.js';
 import { setupWebSocket } from './websocket/index.js';
+import { NotificationService } from './websocket/notification-service.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { logger } from './utils/logger.js';
+import { auditAuth } from './middleware/audit.js';
+import { cacheService } from './services/cache-service.js';
+import { databaseOptimizer } from './services/database-optimizer.js';
+import { aiChatbotService } from './services/ai-chatbot-service.js';
+import { aiAnalyticsService } from './services/ai-analytics-service.js';
+import { aiReportGeneratorService } from './services/ai-report-generator.js';
+import { calendarService } from './services/calendar-service.js';
 
 // Configuración de la aplicación
 const app = express();
@@ -132,6 +140,9 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 setupPassport(passport);
+
+// Middleware de auditoría para autenticación
+app.use(auditAuth());
 
 // Endpoint temporal para manifest.json
 app.get('/manifest.json', (req, res) => {
@@ -577,6 +588,9 @@ if (process.env.NODE_ENV === 'production') {
 // Middleware de manejo de errores
 app.use(errorHandler);
 
+// Inicializar servicio de notificaciones
+let notificationService: NotificationService;
+
 // Función de inicialización
 async function initializeApp() {
   try {
@@ -585,6 +599,42 @@ async function initializeApp() {
     // Inicializar base de datos
     await initializeDatabase();
     logger.info('✅ Base de datos inicializada');
+    
+    // Inicializar servicio de notificaciones
+    notificationService = new NotificationService(server);
+    logger.info('✅ Servicio de notificaciones inicializado');
+    
+    // Hacer el servicio disponible globalmente
+    (global as any).notificationService = notificationService;
+    
+    // Inicializar servicios de optimización
+    await cacheService.connect();
+    logger.info('✅ Servicio de caché inicializado');
+    
+    await databaseOptimizer.initialize();
+    logger.info('✅ Optimizador de base de datos inicializado');
+    
+    // Inicializar servicios de IA
+    await aiChatbotService.initialize();
+    logger.info('✅ Servicio de chatbot IA inicializado');
+    
+    await aiAnalyticsService.initialize();
+    logger.info('✅ Servicio de análisis predictivo IA inicializado');
+    
+    await aiReportGeneratorService.initialize();
+    logger.info('✅ Servicio de generación de reportes IA inicializado');
+    
+    // Inicializar servicio de calendario
+    await calendarService.initialize();
+    logger.info('✅ Servicio de calendario inicializado');
+    
+    // Hacer los servicios disponibles globalmente
+    (global as any).cacheService = cacheService;
+    (global as any).databaseOptimizer = databaseOptimizer;
+    (global as any).aiChatbotService = aiChatbotService;
+    (global as any).aiAnalyticsService = aiAnalyticsService;
+    (global as any).aiReportGeneratorService = aiReportGeneratorService;
+    (global as any).calendarService = calendarService;
     
     // Iniciar servidor
     server.listen(port, () => {

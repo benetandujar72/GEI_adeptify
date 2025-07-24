@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import LanguageSelector from './LanguageSelector';
 import AIChatbot from './ai/AIChatbot';
+import { NotificationCenter } from './NotificationCenter';
 import { cn, getUserRoleLabel, getRoleColor } from '../lib/utils';
 import { 
   Menu, 
@@ -141,16 +142,7 @@ export default function Layout({ children }: LayoutProps) {
             </Button>
 
             {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-9 h-9 p-0 relative"
-            >
-              <Bell className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                3
-              </span>
-            </Button>
+            <NotificationCenter />
 
             {/* User dropdown */}
             <div className="relative">

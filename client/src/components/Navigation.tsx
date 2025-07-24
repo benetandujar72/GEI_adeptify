@@ -98,6 +98,11 @@ export default function Navigation() {
       ]
     },
     {
+      label: 'Calendari',
+      href: '/calendar',
+      icon: Calendar
+    },
+    {
       label: 'Comunicació',
       href: '/communication',
       icon: MessageSquare,
