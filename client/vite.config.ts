@@ -51,6 +51,9 @@ export default defineConfig({
   },
   define: {
     'process.env': {},
+    // Definir variables de entorno para el cliente
+    __PROD__: JSON.stringify(process.env.NODE_ENV === 'production'),
+    __DEV__: JSON.stringify(process.env.NODE_ENV === 'development'),
   },
   // Configuración para evitar problemas en Docker
   optimizeDeps: {
