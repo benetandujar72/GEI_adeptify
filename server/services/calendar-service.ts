@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db } from "../database/init";
 import { 
   activities, 
   users, 
@@ -6,7 +6,7 @@ import {
   type Activity,
   type User,
   type Institute
-} from "@shared/schema";
+} from "../../shared/schema";
 import { eq, and, gte, lte, desc, asc, isNotNull } from "drizzle-orm";
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';

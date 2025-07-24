@@ -166,14 +166,14 @@ export class GoogleSheetsService {
         rows.push(['ID', 'Estudiante', 'Competencia', 'Puntuación', 'Feedback', 'Fecha']);
       }
 
-      evaluationsData.forEach(eval => {
+      evaluationsData.forEach(evaluation => {
         rows.push([
-          eval.id,
-          eval.studentName,
-          eval.competencyName,
-          eval.score,
-          eval.feedback,
-          eval.createdAt?.toISOString()
+          evaluation.id,
+          evaluation.studentName,
+          evaluation.competencyName,
+          evaluation.score,
+          evaluation.feedback,
+          evaluation.createdAt?.toISOString()
         ]);
       });
 
