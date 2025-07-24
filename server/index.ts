@@ -313,11 +313,64 @@ if (process.env.NODE_ENV === 'production') {
       }
     });
     
-    // Middleware específico para archivos de assets
-    app.use('/assets', express.static(path.join(staticPath, 'assets')));
+    // Middleware específico para archivos de assets con logging
+    app.use('/assets', (req, res, next) => {
+      logger.info(`🔍 ===== PETICIÓN ASSET RECIBIDA =====`);
+      logger.info(`📂 Ruta solicitada: ${req.url}`);
+      logger.info(`📂 staticPath: ${staticPath}`);
+      logger.info(`📂 Ruta completa: ${path.join(staticPath, 'assets', req.url)}`);
+      
+      const assetPath = path.join(staticPath, 'assets', req.url);
+      if (fs.existsSync(assetPath)) {
+        logger.info(`✅ Asset encontrado: ${req.url}`);
+        next();
+      } else {
+        logger.error(`❌ Asset no encontrado: ${req.url}`);
+        logger.error(`📂 Buscado en: ${assetPath}`);
+        
+        // Listar archivos disponibles en assets para debug
+        const assetsDir = path.join(staticPath, 'assets');
+        if (fs.existsSync(assetsDir)) {
+          try {
+            const files = fs.readdirSync(assetsDir);
+            logger.error(`📋 Archivos disponibles en assets: ${files.join(', ')}`);
+          } catch (error) {
+            logger.error('❌ Error listando archivos de assets:', error);
+          }
+        } else {
+          logger.error(`❌ Directorio assets no existe: ${assetsDir}`);
+        }
+        
+        next();
+      }
+    }, express.static(path.join(staticPath, 'assets')));
     
     // Middleware general para archivos estáticos
     app.use(express.static(staticPath));
+    
+    // Fallback para SPA - servir index.html para rutas no encontradas
+    app.get('*', (req, res) => {
+      // Solo servir index.html para rutas que no sean API
+      if (!req.path.startsWith('/api/')) {
+        logger.info(`🔄 ===== FALLBACK SPA =====`);
+        logger.info(`📂 Ruta solicitada: ${req.path}`);
+        logger.info(`📂 Sirviendo index.html`);
+        
+        const indexPath = path.join(staticPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+          res.sendFile(indexPath);
+        } else {
+          logger.error(`❌ index.html no encontrado en: ${indexPath}`);
+          res.status(404).json({ 
+            error: 'index.html not found',
+            path: req.path,
+            searchedPath: indexPath
+          });
+        }
+      } else {
+        res.status(404).json({ error: 'API endpoint not found', path: req.path });
+      }
+    });
     
     logger.info('✅ ===== MIDDLEWARE DE ARCHIVOS ESTÁTICOS CONFIGURADO =====');
     logger.info(`📂 Ruta configurada: ${staticPath}`);

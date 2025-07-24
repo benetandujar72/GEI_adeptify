@@ -37,10 +37,11 @@ export default defineConfig({
     emptyOutDir: true, // Limpiar el directorio de salida
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge'],
-        },
+        // Configuración más simple para evitar problemas con chunks
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: undefined, // Deshabilitar manualChunks para evitar problemas
       },
     },
     // Configuraciones adicionales para Docker
