@@ -52,19 +52,19 @@ RUN echo "=== Verificando copia de client/src ===" && \
     find . -name "Competencies.tsx" 2>/dev/null || echo "No se encontró Competencies.tsx en el sistema" && \
     find . -name "Guards.tsx" 2>/dev/null || echo "No se encontró Guards.tsx en el sistema"
 
-# Copiar directorios específicos si no existen
-RUN echo "=== Copiando directorios específicos ===" && \
-    if [ ! -d "client/src/pages/adeptify" ] || [ -z "$(ls -A client/src/pages/adeptify 2>/dev/null)" ]; then \
-        echo "Copiando directorio adeptify..." && \
-        cp -r client/src/pages/adeptify client/src/pages/ 2>/dev/null || echo "No se pudo copiar directorio adeptify"; \
-    fi && \
-    if [ ! -d "client/src/pages/assistatut" ] || [ -z "$(ls -A client/src/pages/assistatut 2>/dev/null)" ]; then \
-        echo "Copiando directorio assistatut..." && \
-        cp -r client/src/pages/assistatut client/src/pages/ 2>/dev/null || echo "No se pudo copiar directorio assistatut"; \
-    fi && \
-    echo "=== Verificando contenido final de directorios ===" && \
-    ls -la client/src/pages/adeptify/ || echo "Directorio adeptify no existe o está vacío" && \
-    ls -la client/src/pages/assistatut/ || echo "Directorio assistatut no existe o está vacío"
+# Copiar archivos específicos directamente desde el contexto
+COPY client/src/pages/adeptify/Competencies.tsx ./client/src/pages/adeptify/Competencies.tsx
+COPY client/src/pages/adeptify/Settings.tsx ./client/src/pages/adeptify/Settings.tsx
+COPY client/src/pages/adeptify/Statistics.tsx ./client/src/pages/adeptify/Statistics.tsx
+COPY client/src/pages/adeptify/Evaluations.tsx ./client/src/pages/adeptify/Evaluations.tsx
+COPY client/src/pages/adeptify/Criteria.tsx ./client/src/pages/adeptify/Criteria.tsx
+COPY client/src/pages/assistatut/Guards.tsx ./client/src/pages/assistatut/Guards.tsx
+COPY client/src/pages/assistatut/Attendance.tsx ./client/src/pages/assistatut/Attendance.tsx
+
+# Verificar que los archivos se copiaron correctamente
+RUN echo "=== Verificando archivos copiados directamente ===" && \
+    ls -la client/src/pages/adeptify/ && \
+    ls -la client/src/pages/assistatut/
 
 # Copiar directorio shared
 COPY shared ./shared
