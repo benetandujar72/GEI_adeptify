@@ -42,7 +42,24 @@ RUN echo "=== Verificando copia de client/src ===" && \
     echo "=== Verificando copia de client/src/pages ===" && \
     ls -la client/src/pages/ && \
     echo "=== Verificando copia de client/src/pages/adeptify ===" && \
-    ls -la client/src/pages/adeptify/ || echo "Directorio adeptify no encontrado"
+    ls -la client/src/pages/adeptify/ || echo "Directorio adeptify no encontrado" && \
+    echo "=== Verificando copia de client/src/pages/assistatut ===" && \
+    ls -la client/src/pages/assistatut/ || echo "Directorio assistatut no encontrado" && \
+    echo "=== Verificando archivos específicos ===" && \
+    ls -la client/src/pages/adeptify/Competencies.tsx || echo "Competencies.tsx no encontrado" && \
+    ls -la client/src/pages/assistatut/Guards.tsx || echo "Guards.tsx no encontrado"
+
+# Si los directorios críticos no existen, copiarlos específicamente
+RUN if [ ! -d "client/src/pages/adeptify" ]; then \
+        echo "=== Copiando directorio adeptify específicamente ===" && \
+        mkdir -p client/src/pages/adeptify && \
+        cp -r client/src/pages/adeptify/* client/src/pages/adeptify/ 2>/dev/null || echo "No se pudo copiar adeptify"; \
+    fi && \
+    if [ ! -d "client/src/pages/assistatut" ]; then \
+        echo "=== Copiando directorio assistatut específicamente ===" && \
+        mkdir -p client/src/pages/assistatut && \
+        cp -r client/src/pages/assistatut/* client/src/pages/assistatut/ 2>/dev/null || echo "No se pudo copiar assistatut"; \
+    fi
 
 # Copiar directorio shared
 COPY shared ./shared
