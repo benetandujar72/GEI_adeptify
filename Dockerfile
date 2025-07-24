@@ -77,12 +77,20 @@ RUN echo "=== Verificación completa de archivos críticos ===" && \
 # Copiar directorio shared
 COPY shared ./shared
 
+# Copiar scripts y archivos de configuración adicionales
+COPY scripts ./scripts
+COPY render.yaml ./
+COPY drizzle ./drizzle
+
 # Verificar archivos de configuración críticos
 RUN echo "=== Verificando archivos de configuración ===" && \
     ls -la tsconfig.json esbuild.config.js vite.config.ts tailwind.config.ts postcss.config.js && \
     ls -la client/postcss.config.js client/tailwind.config.js client/tsconfig.node.json client/tsconfig.json client/vite.config.ts client/index.html && \
     ls -la client/public/manifest.json client/public/logo.svg server/index.ts client/src/App.tsx && \
     ls -la shared/schema.ts && \
+    ls -la render.yaml && \
+    ls -la scripts/ && \
+    ls -la drizzle/ && \
     echo "✅ Todos los archivos de configuración verificados"
 
 # Construir la aplicación
