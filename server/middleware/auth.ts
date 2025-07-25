@@ -165,23 +165,19 @@ export function requireOwnership(resourceType: string, idParam: string = 'id') {
 }
 
 /**
- * Middleware para logging de peticiones
+ * Middleware para logging de requests
  */
 export function requestLogger(req: Request, res: Response, next: NextFunction) {
-  const startTime = Date.now();
-  
-  logger.info(`🌐 ${req.method} ${req.path} - Iniciant petició`);
-  
-  if (req.user) {
-    logger.info(`👤 Usuari: ${req.user.id} (${req.user.role})`);
-  }
-  
-  // Log de respuesta
-  res.on('finish', () => {
-    const duration = Date.now() - startTime;
-    const statusColor = res.statusCode >= 400 ? '❌' : '✅';
-    logger.info(`${statusColor} ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
-  });
-  
+  logger.info(`${req.method} ${req.path} - ${req.ip}`);
   next();
-} 
+}
+
+/**
+ * Alias para isAuthenticated - para compatibilidad con código existente
+ */
+export const requireAuth = isAuthenticated;
+
+/**
+ * Alias para isAuthenticated - para compatibilidad con código existente
+ */
+export const authenticateToken = isAuthenticated; 

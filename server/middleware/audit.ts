@@ -279,7 +279,7 @@ function sanitizeBody(body: any): any {
 }
 
 /**
- * Función helper para registrar acciones manualmente
+ * Función helper para logging manual de auditoría
  */
 export const logManualAction = async (
   req: Request,
@@ -288,22 +288,25 @@ export const logManualAction = async (
   details?: Record<string, any>
 ) => {
   try {
-    const user = (req as any).user;
-    const userId = user?.id;
-    const instituteId = user?.instituteId;
-    const ipAddress = getClientIP(req);
-    const userAgent = req.get('User-Agent');
-
-    await auditService.logAction({
-      userId,
-      instituteId,
+    await auditService.createAuditLog({
+      userId: req.user?.id,
+      instituteId: req.user?.instituteId,
       action,
       resource,
-      details,
-      ipAddress,
-      userAgent,
+      details: {
+        ...details,
+        path: req.path,
+        method: req.method,
+        ip: getClientIP(req),
+        userAgent: req.get('User-Agent'),
+      },
     });
   } catch (error) {
     logger.error('Error logging manual action:', error);
   }
-}; 
+};
+
+/**
+ * Alias para logManualAction - para compatibilidad con código existente
+ */
+export const auditLog = logManualAction; 
