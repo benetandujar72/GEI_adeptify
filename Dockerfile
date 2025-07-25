@@ -56,6 +56,36 @@ RUN echo "=== Creando archivos mínimos si no existen ===" && \
     if [ ! -f "client/src/pages/assistatut/Attendance.tsx" ]; then \
         echo "import React from 'react'; export default function Attendance() { return <div>Attendance Page</div>; }" > client/src/pages/assistatut/Attendance.tsx; \
     fi && \
+    if [ ! -f "client/src/components/ui/checkbox.tsx" ]; then \
+        echo 'import * as React from "react"' > client/src/components/ui/checkbox.tsx && \
+        echo 'import * as CheckboxPrimitive from "@radix-ui/react-checkbox"' >> client/src/components/ui/checkbox.tsx && \
+        echo 'import { Check } from "lucide-react"' >> client/src/components/ui/checkbox.tsx && \
+        echo '' >> client/src/components/ui/checkbox.tsx && \
+        echo 'import { cn } from "@/lib/utils"' >> client/src/components/ui/checkbox.tsx && \
+        echo '' >> client/src/components/ui/checkbox.tsx && \
+        echo 'const Checkbox = React.forwardRef<' >> client/src/components/ui/checkbox.tsx && \
+        echo '  React.ElementRef<typeof CheckboxPrimitive.Root>,' >> client/src/components/ui/checkbox.tsx && \
+        echo '  React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>' >> client/src/components/ui/checkbox.tsx && \
+        echo '>(({ className, ...props }, ref) => (' >> client/src/components/ui/checkbox.tsx && \
+        echo '  <CheckboxPrimitive.Root' >> client/src/components/ui/checkbox.tsx && \
+        echo '    ref={ref}' >> client/src/components/ui/checkbox.tsx && \
+        echo '    className={cn(' >> client/src/components/ui/checkbox.tsx && \
+        echo '      "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",' >> client/src/components/ui/checkbox.tsx && \
+        echo '      className' >> client/src/components/ui/checkbox.tsx && \
+        echo '    )}' >> client/src/components/ui/checkbox.tsx && \
+        echo '    {...props}' >> client/src/components/ui/checkbox.tsx && \
+        echo '  >' >> client/src/components/ui/checkbox.tsx && \
+        echo '    <CheckboxPrimitive.Indicator' >> client/src/components/ui/checkbox.tsx && \
+        echo '      className={cn("flex items-center justify-center text-current")}' >> client/src/components/ui/checkbox.tsx && \
+        echo '    >' >> client/src/components/ui/checkbox.tsx && \
+        echo '      <Check className="h-4 w-4" />' >> client/src/components/ui/checkbox.tsx && \
+        echo '    </CheckboxPrimitive.Indicator>' >> client/src/components/ui/checkbox.tsx && \
+        echo '  </CheckboxPrimitive.Root>' >> client/src/components/ui/checkbox.tsx && \
+        echo '))' >> client/src/components/ui/checkbox.tsx && \
+        echo 'Checkbox.displayName = CheckboxPrimitive.Root.displayName' >> client/src/components/ui/checkbox.tsx && \
+        echo '' >> client/src/components/ui/checkbox.tsx && \
+        echo 'export { Checkbox }' >> client/src/components/ui/checkbox.tsx; \
+    fi && \
     echo "✅ Archivos mínimos creados"
 
 # Verificar que todos los archivos críticos están presentes
@@ -68,6 +98,8 @@ RUN echo "=== Verificación completa de archivos críticos ===" && \
     ls -la client/src/pages/assistatut/ && \
     echo "✅ Componentes:" && \
     ls -la client/src/components/Navigation.tsx client/src/components/ProtectedRoute.tsx && \
+    echo "✅ Componente Checkbox:" && \
+    ls -la client/src/components/ui/checkbox.tsx && \
     echo "✅ Hooks:" && \
     ls -la client/src/hooks/useAuth.tsx && \
     echo "✅ Archivos de estilo:" && \

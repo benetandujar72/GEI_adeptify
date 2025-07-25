@@ -13,7 +13,7 @@ const externalDependencies = [
   'postgres', 'cors', 'helmet', 'compression', 'winston', 'express', 
   'express-session', 'passport', 'passport-google-oauth20', 'passport-local', 
   'bcryptjs', 'jsonwebtoken', 'express-fileupload', 'connect-pg-simple', 
-  'memorystore', 'dotenv', 'ws',
+  'memorystore', 'dotenv', 'ws', 'redis', 'socket.io', 'ioredis',
   
   // Dependencias de Drizzle
   'drizzle-orm', 'drizzle-orm/postgres-js', 'drizzle-orm/neon-serverless',
