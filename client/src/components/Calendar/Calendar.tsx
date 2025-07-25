@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Plus, Settings, RefreshCw, Download, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useApi } from '@/hooks/use-api';
+import { useApi } from '@/hooks/useApi';
 import { EventForm } from './EventForm';
 import { EventDetails } from './EventDetails';
 import { CalendarStats } from './CalendarStats';

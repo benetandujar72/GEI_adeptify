@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Calendar } from '../../../client/src/components/Calendar/Calendar';
-import { useApi } from '../../../client/src/hooks/use-api';
+import { useApi } from '../../../client/src/hooks/useApi';
 import { useToast } from '../../../client/src/hooks/use-toast';
 
 // Mock de los hooks
-vi.mock('../../../client/src/hooks/use-api');
+vi.mock('../../../client/src/hooks/useApi');
 vi.mock('../../../client/src/hooks/use-toast');
 
 // Mock de FullCalendar
