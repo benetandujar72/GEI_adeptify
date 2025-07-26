@@ -604,9 +604,13 @@ async function initializeApp() {
       logger.error('❌ Directorio shared no existe');
     }
     
-    // Inicializar base de datos
+    // Inicializar base de datos con timeout
     logger.info('🗄️ Inicializando base de datos...');
-    await initializeDatabase();
+    const dbPromise = initializeDatabase();
+    const dbTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database initialization timeout')), 30000)
+    );
+    await Promise.race([dbPromise, dbTimeout]);
     logger.info('✅ Base de datos inicializada');
     
     // Inicializar servicio de notificaciones
@@ -617,31 +621,55 @@ async function initializeApp() {
     // Hacer el servicio disponible globalmente
     (global as any).notificationService = notificationService;
     
-    // Inicializar servicios de optimización
+    // Inicializar servicios de optimización con timeout
     logger.info('⚡ Inicializando servicio de caché...');
-    await cacheService.connect();
+    const cachePromise = cacheService.connect();
+    const cacheTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Cache service timeout')), 15000)
+    );
+    await Promise.race([cachePromise, cacheTimeout]);
     logger.info('✅ Servicio de caché inicializado');
     
     logger.info('🔧 Inicializando optimizador de base de datos...');
-    await databaseOptimizer.initialize();
+    const optimizerPromise = databaseOptimizer.initialize();
+    const optimizerTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database optimizer timeout')), 15000)
+    );
+    await Promise.race([optimizerPromise, optimizerTimeout]);
     logger.info('✅ Optimizador de base de datos inicializado');
     
-    // Inicializar servicios de IA
+    // Inicializar servicios de IA con timeout
     logger.info('🤖 Inicializando servicio de chatbot IA...');
-    await aiChatbotService.initialize();
+    const chatbotPromise = aiChatbotService.initialize();
+    const chatbotTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('AI Chatbot timeout')), 15000)
+    );
+    await Promise.race([chatbotPromise, chatbotTimeout]);
     logger.info('✅ Servicio de chatbot IA inicializado');
     
     logger.info('📊 Inicializando servicio de análisis predictivo IA...');
-    await aiAnalyticsService.initialize();
+    const analyticsPromise = aiAnalyticsService.initialize();
+    const analyticsTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('AI Analytics timeout')), 15000)
+    );
+    await Promise.race([analyticsPromise, analyticsTimeout]);
     logger.info('✅ Servicio de análisis predictivo IA inicializado');
     
     logger.info('📄 Inicializando servicio de generación de reportes IA...');
-    await aiReportGeneratorService.initialize();
+    const reportPromise = aiReportGeneratorService.initialize();
+    const reportTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('AI Report Generator timeout')), 15000)
+    );
+    await Promise.race([reportPromise, reportTimeout]);
     logger.info('✅ Servicio de generación de reportes IA inicializado');
     
-    // Inicializar servicio de calendario
+    // Inicializar servicio de calendario con timeout
     logger.info('📅 Inicializando servicio de calendario...');
-    await calendarService.initialize();
+    const calendarPromise = calendarService.initialize();
+    const calendarTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Calendar service timeout')), 15000)
+    );
+    await Promise.race([calendarPromise, calendarTimeout]);
     logger.info('✅ Servicio de calendario inicializado');
     
     // Hacer los servicios disponibles globalmente
@@ -668,6 +696,11 @@ async function initializeApp() {
   } catch (error) {
     logger.error('❌ Error al inicializar la aplicación:', error);
     logger.error('📋 Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+    logger.error('🔍 Información adicional del error:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    });
     process.exit(1);
   }
 }
