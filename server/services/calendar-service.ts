@@ -65,11 +65,18 @@ export interface CalendarConfig {
  * Integra eventos internos con Google Calendar y otros servicios
  */
 export class CalendarService {
-  private notificationService: NotificationService;
+  private notificationService?: NotificationService;
   private googleAuthClient?: OAuth2Client;
 
   constructor() {
-    this.notificationService = new NotificationService();
+    // NotificationService will be set later when server is available
+  }
+
+  /**
+   * Set the notification service (called after server initialization)
+   */
+  setNotificationService(notificationService: NotificationService): void {
+    this.notificationService = notificationService;
   }
 
   /**
@@ -752,6 +759,11 @@ export class CalendarService {
     event: CalendarEvent,
     action: 'created' | 'updated' | 'deleted'
   ): Promise<void> {
+    if (!this.notificationService) {
+      console.log('⚠️ NotificationService not available, skipping notification');
+      return;
+    }
+
     try {
       const actionMessages = {
         created: 'Se ha creado un nuevo evento',

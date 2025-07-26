@@ -7,11 +7,16 @@ import { logger } from '../utils/logger.js';
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
 
 // Configuración de conexión con SSL para Render
-const sql = postgres(databaseUrl, { 
-  max: 1,
+export const sql = postgres(databaseUrl, { 
+  max: 5, // Máximo 5 conexiones en el pool
+  idle_timeout: 20, // Cerrar conexiones inactivas después de 20 segundos
+  connect_timeout: 10, // Timeout de conexión de 10 segundos
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false // Para Render.com
-  } : false
+  } : false,
+  connection: {
+    application_name: 'gei-unified-platform'
+  }
 });
 export const db = drizzle(sql);
 
@@ -55,9 +60,8 @@ export async function initializeDatabase(): Promise<void> {
   } catch (error) {
     logger.error('❌ Error al inicializar base de datos:', error);
     throw error;
-  } finally {
-    await sql.end();
   }
+  // Removed sql.end() from finally block to keep connection alive
 }
 
 /**

@@ -28,7 +28,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Importaciones de servicios
-import { initializeDatabase } from './database/init.js';
+import { initializeDatabase, db, sql } from './database/init.js';
 import { setupPassport } from './auth/passport.js';
 import { setupRoutes } from './routes/index.js';
 import { setupWebSocket } from './websocket/index.js';
@@ -52,22 +52,7 @@ const app = express();
 const server = createServer(app);
 const port = process.env.PORT || 3001;
 
-// Configuración de base de datos
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
-
-// Configuración de conexión con SSL para Render
-const sql = postgres(databaseUrl, {
-  max: 5, // Máximo 5 conexiones en el pool
-  idle_timeout: 20, // Cerrar conexiones inactivas después de 20 segundos
-  connect_timeout: 10, // Timeout de conexión de 10 segundos
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: false // Para Render.com
-  } : false,
-  connection: {
-    application_name: 'gei-unified-platform'
-  }
-});
-export const db = drizzle(sql);
+// Database connection is now imported from ./database/init.js
 
 // Middleware de seguridad
 app.use(helmet({
@@ -694,6 +679,9 @@ async function initializeApp() {
     logger.info('🔄 DESPUÉS de await aiReportGeneratorService.initialize()');
     logger.info('✅ Servicio de generación de reportes IA inicializado');
     
+    // Configurar notification service en calendar service
+    calendarService.setNotificationService(notificationService);
+    
     // Inicializar servicio de calendario con timeout
     logger.info('📅 Inicializando servicio de calendario...');
     logger.info('🔄 ANTES de await calendarService.initialize()');
@@ -786,11 +774,12 @@ console.log('🔥🔥🔥 ANTES DE LLAMAR A initializeApp() 🔥🔥🔥');
 console.log(`🔥 Timestamp: ${new Date().toISOString()}`);
 console.log(`🔥 typeof initializeApp: ${typeof initializeApp}`);
 
-try {
-  initializeApp();
-  console.log('🔥🔥🔥 initializeApp() LLAMADA EXITOSAMENTE 🔥🔥🔥');
-} catch (error) {
-  console.error('🔥🔥🔥 ERROR AL LLAMAR initializeApp():', error);
+// Handle initialization with proper error handling
+initializeApp().catch((error) => {
+  console.error('🔥🔥🔥 ERROR AL INICIALIZAR LA APLICACIÓN:', error);
   console.error('🔥 Stack:', error instanceof Error ? error.stack : 'No stack');
+  console.error('🔥🔥🔥 TERMINANDO PROCESO DUE TO INITIALIZATION ERROR 🔥🔥🔥');
   process.exit(1);
-} 
+});
+
+console.log('🔥🔥🔥 initializeApp() LLAMADA EXITOSAMENTE 🔥🔥🔥'); 

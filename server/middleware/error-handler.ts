@@ -53,8 +53,11 @@ export function errorHandler(
 
   // Si es un error operacional, no terminar el proceso
   if (!isOperational) {
-    logger.error('💥 Error no operacional detectado, terminando proceso...');
-    process.exit(1);
+    logger.error('💥 Error no operacional detectado, pero no terminando proceso en producción...');
+    // Only exit in development to prevent crashes in production
+    if (process.env.NODE_ENV === 'development') {
+      process.exit(1);
+    }
   }
 }
 
