@@ -581,6 +581,7 @@ let notificationService: NotificationService;
 // Función de inicialización
 async function initializeApp() {
   try {
+    logger.info('🚀 ===== INICIO DE initializeApp() =====');
     logger.info('🚀 Iniciando GEI Unified Platform...');
     logger.info('📋 Variables de entorno verificadas');
     logger.info(`🌍 NODE_ENV: ${process.env.NODE_ENV}`);
@@ -607,13 +608,18 @@ async function initializeApp() {
     // Inicializar base de datos con timeout
     logger.info('🗄️ Inicializando base de datos...');
     logger.info('🔄 ANTES de await initializeDatabase()');
-    const dbPromise = initializeDatabase();
-    const dbTimeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database initialization timeout')), 30000)
-    );
-    await Promise.race([dbPromise, dbTimeout]);
-    logger.info('🔄 DESPUÉS de await initializeDatabase()');
-    logger.info('✅ Base de datos inicializada');
+    try {
+      const dbPromise = initializeDatabase();
+      const dbTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database initialization timeout')), 30000)
+      );
+      await Promise.race([dbPromise, dbTimeout]);
+      logger.info('🔄 DESPUÉS de await initializeDatabase()');
+      logger.info('✅ Base de datos inicializada');
+    } catch (dbError) {
+      logger.error('❌ Error en inicialización de base de datos:', dbError);
+      throw dbError;
+    }
     
     // Inicializar servicio de notificaciones
     logger.info('🔔 Inicializando servicio de notificaciones...');
@@ -711,6 +717,7 @@ async function initializeApp() {
       logger.info('🎉 ¡Aplicación inicializada completamente!');
     });
     logger.info('🔄 DESPUÉS de server.listen() - Función llamada');
+    logger.info('🎯 ===== FIN DE initializeApp() - FUNCIÓN COMPLETADA =====');
     
   } catch (error) {
     logger.error('❌ Error al inicializar la aplicación:', error);
