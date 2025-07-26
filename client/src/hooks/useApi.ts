@@ -29,6 +29,40 @@ const apiClient = {
   },
 };
 
+// General useApi hook
+export const useApi = () => {
+  return {
+    get: useCallback(async (url: string, options?: { params?: Record<string, any> }) => {
+      let fullUrl = url;
+      if (options?.params) {
+        const searchParams = new URLSearchParams();
+        Object.entries(options.params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+        const queryString = searchParams.toString();
+        if (queryString) {
+          fullUrl += `?${queryString}`;
+        }
+      }
+      return apiClient.get(fullUrl);
+    }, []),
+    
+    post: useCallback(async (url: string, data: any) => {
+      return apiClient.post(url, data);
+    }, []),
+    
+    put: useCallback(async (url: string, data: any) => {
+      return apiClient.put(url, data);
+    }, []),
+    
+    delete: useCallback(async (url: string) => {
+      return apiClient.delete(url);
+    }, []),
+  };
+};
+
 // Survey hooks
 export const useSurveys = () => {
   return useQuery({
