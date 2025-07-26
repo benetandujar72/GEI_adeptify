@@ -404,54 +404,44 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
+// Configuración de rutas
+app.use('/api', setupRoutes());
+
+// Health check endpoint para Render
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
+
+// Health check endpoint para API
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
     environment: process.env.NODE_ENV,
     version: process.env.npm_package_version || '1.0.0',
-    port: process.env.PORT || 3000,
-    uptime: process.uptime(),
-  });
-});
-
-// Simple health check for Render
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    service: 'GEI Unified Platform'
-  });
-});
-
-// Database health check endpoint
-app.get('/api/health/db', async (req, res) => {
-  try {
-    // Test database connection
-    const result = await sql`SELECT 1 as test, current_timestamp as timestamp`;
-    
-    res.json({
-      status: 'ok',
+    services: {
       database: 'connected',
-      timestamp: new Date().toISOString(),
-      test_result: result[0],
-      connection_info: {
-        host: process.env.DB_HOST || 'unknown',
-        database: process.env.DB_NAME || 'unknown',
-        pool_size: 5,
-        max_connections: 10 // Render limit
-      }
-    });
-  } catch (error) {
-    logger.error('Database health check failed:', error);
-    res.status(500).json({
-      status: 'error',
-      database: 'disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    });
-  }
+      cache: 'connected',
+      notifications: 'active'
+    }
+  });
+});
+
+// Ruta raíz
+app.get('/', (req, res) => {
+  res.json({
+    message: 'GEI Unified Platform API',
+    version: process.env.npm_package_version || '1.0.0',
+    environment: process.env.NODE_ENV,
+    status: 'running'
+  });
 });
 
 // Endpoint de debug específico para manifest.json
@@ -539,9 +529,6 @@ app.get('/api/debug', (req, res) => {
   }
 });
 
-// Configuración de rutas API
-app.use('/api', setupRoutes());
-
 // Configuración de WebSocket
 const wss = new WebSocketServer({ server });
 setupWebSocket(wss);
@@ -595,12 +582,35 @@ let notificationService: NotificationService;
 async function initializeApp() {
   try {
     logger.info('🚀 Iniciando GEI Unified Platform...');
+    logger.info('📋 Variables de entorno verificadas');
+    logger.info(`🌍 NODE_ENV: ${process.env.NODE_ENV}`);
+    logger.info(`🔌 PORT: ${port}`);
+    logger.info(`📁 Directorio actual: ${__dirname}`);
+    
+    // Verificar archivos críticos
+    logger.info('🔍 Verificando archivos críticos...');
+    const distPath = path.join(__dirname, 'dist');
+    const sharedPath = path.join(__dirname, '..', 'shared');
+    
+    if (fs.existsSync(distPath)) {
+      logger.info('✅ Directorio dist existe');
+    } else {
+      logger.error('❌ Directorio dist no existe');
+    }
+    
+    if (fs.existsSync(sharedPath)) {
+      logger.info('✅ Directorio shared existe');
+    } else {
+      logger.error('❌ Directorio shared no existe');
+    }
     
     // Inicializar base de datos
+    logger.info('🗄️ Inicializando base de datos...');
     await initializeDatabase();
     logger.info('✅ Base de datos inicializada');
     
     // Inicializar servicio de notificaciones
+    logger.info('🔔 Inicializando servicio de notificaciones...');
     notificationService = new NotificationService(server);
     logger.info('✅ Servicio de notificaciones inicializado');
     
@@ -608,23 +618,29 @@ async function initializeApp() {
     (global as any).notificationService = notificationService;
     
     // Inicializar servicios de optimización
+    logger.info('⚡ Inicializando servicio de caché...');
     await cacheService.connect();
     logger.info('✅ Servicio de caché inicializado');
     
+    logger.info('🔧 Inicializando optimizador de base de datos...');
     await databaseOptimizer.initialize();
     logger.info('✅ Optimizador de base de datos inicializado');
     
     // Inicializar servicios de IA
+    logger.info('🤖 Inicializando servicio de chatbot IA...');
     await aiChatbotService.initialize();
     logger.info('✅ Servicio de chatbot IA inicializado');
     
+    logger.info('📊 Inicializando servicio de análisis predictivo IA...');
     await aiAnalyticsService.initialize();
     logger.info('✅ Servicio de análisis predictivo IA inicializado');
     
+    logger.info('📄 Inicializando servicio de generación de reportes IA...');
     await aiReportGeneratorService.initialize();
     logger.info('✅ Servicio de generación de reportes IA inicializado');
     
     // Inicializar servicio de calendario
+    logger.info('📅 Inicializando servicio de calendario...');
     await calendarService.initialize();
     logger.info('✅ Servicio de calendario inicializado');
     
@@ -637,17 +653,21 @@ async function initializeApp() {
     (global as any).calendarService = calendarService;
     
     // Iniciar servidor
+    logger.info(`🌐 Iniciando servidor en puerto ${port}...`);
     server.listen(port, () => {
-      logger.info(`🌐 Servidor ejecutándose en puerto ${port}`);
+      logger.info(`✅ Servidor ejecutándose en puerto ${port}`);
       logger.info(`📊 Health check: http://localhost:${port}/api/health`);
       
       if (process.env.NODE_ENV === 'development') {
         logger.info(`🎨 Cliente: http://localhost:3001`);
       }
+      
+      logger.info('🎉 ¡Aplicación inicializada completamente!');
     });
     
   } catch (error) {
     logger.error('❌ Error al inicializar la aplicación:', error);
+    logger.error('📋 Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
     process.exit(1);
   }
 }

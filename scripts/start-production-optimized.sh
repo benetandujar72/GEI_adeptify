@@ -37,22 +37,29 @@ fi
 
 echo "✅ Build verificado: dist/index.js existe"
 
+# Verificar archivos críticos
+echo "🔍 Verificando archivos críticos..."
+ls -la dist/ 2>/dev/null || echo "⚠️  Directorio dist no encontrado"
+ls -la shared/ 2>/dev/null || echo "⚠️  Directorio shared no encontrado"
+ls -la scripts/ 2>/dev/null || echo "⚠️  Directorio scripts no encontrado"
+
 # Asegurar que el puerto esté configurado
 export PORT=${PORT:-3000}
-
-# Iniciar la aplicación con manejo de señales
-echo "🚀 Iniciando servidor en puerto $PORT..."
-echo "🌐 La aplicación estará disponible en el puerto $PORT"
 
 # Función para manejar señales de terminación
 cleanup() {
     echo "🛑 Recibida señal de terminación, cerrando aplicación..."
+    echo "📊 Estado final del proceso: $?"
     exit 0
 }
 
 # Configurar manejadores de señales
 trap cleanup SIGTERM SIGINT
 
-# Iniciar la aplicación y mantener el proceso vivo
-echo "🎯 Iniciando servidor Node.js..."
-exec node dist/index.js 
+# Iniciar la aplicación con logs detallados
+echo "🚀 Iniciando servidor en puerto $PORT..."
+echo "🌐 La aplicación estará disponible en el puerto $PORT"
+echo "🎯 Iniciando servidor Node.js con logs detallados..."
+
+# Ejecutar con más información de debug
+exec node --trace-warnings dist/index.js 2>&1 | tee -a /tmp/app.log 
