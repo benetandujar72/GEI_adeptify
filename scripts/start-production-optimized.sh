@@ -37,12 +37,22 @@ fi
 
 echo "✅ Build verificado: dist/index.js existe"
 
-# Iniciar la aplicación directamente sin esperar base de datos
-echo "🚀 Iniciando servidor en puerto $PORT..."
-echo "🌐 La aplicación estará disponible en el puerto $PORT"
-
 # Asegurar que el puerto esté configurado
 export PORT=${PORT:-3000}
 
-# Iniciar la aplicación
+# Iniciar la aplicación con manejo de señales
+echo "🚀 Iniciando servidor en puerto $PORT..."
+echo "🌐 La aplicación estará disponible en el puerto $PORT"
+
+# Función para manejar señales de terminación
+cleanup() {
+    echo "🛑 Recibida señal de terminación, cerrando aplicación..."
+    exit 0
+}
+
+# Configurar manejadores de señales
+trap cleanup SIGTERM SIGINT
+
+# Iniciar la aplicación y mantener el proceso vivo
+echo "🎯 Iniciando servidor Node.js..."
 exec node dist/index.js 

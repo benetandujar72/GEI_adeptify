@@ -14,10 +14,12 @@ COPY package*.json tsconfig.json drizzle.config.ts tailwind.config.ts postcss.co
 COPY client/postcss.config.js client/tailwind.config.js client/tsconfig.node.json client/tsconfig.json client/vite.config.ts client/index.html ./client/
 COPY client/public ./client/public
 
-# Instalar dependencias con configuración optimizada
-RUN npm install --production --ignore-scripts && \
+# Limpiar cache de npm y reinstalar dependencias para resolver problemas de esbuild/rollup
+RUN echo "=== Limpiando cache e instalando dependencias ===" && \
+    rm -rf node_modules package-lock.json && \
+    npm cache clean --force && \
     npm install --ignore-scripts && \
-    npm cache clean --force
+    echo "✅ Dependencias instaladas correctamente"
 
 # Copiar código fuente del servidor
 COPY server ./server
@@ -126,8 +128,12 @@ RUN echo "=== Verificando archivos de configuración ===" && \
     ls -la drizzle/ && \
     echo "✅ Todos los archivos de configuración verificados"
 
-# Construir la aplicación
+# Construir la aplicación con limpieza previa
 RUN echo "=== Iniciando build de la aplicación ===" && \
+    echo "=== Limpiando cache de build ===" && \
+    rm -rf dist/ && \
+    rm -rf client/dist/ && \
+    echo "=== Ejecutando build ===" && \
     npm run build && \
     echo "✅ Build completado exitosamente"
 
