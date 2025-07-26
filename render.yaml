@@ -1,12 +1,12 @@
 # Render configuration for GEI Unified Platform
-# Despliegue automático sin configuración manual
+# Despliegue automático optimizado para producción
 
 services:
   - type: web
     name: gei-unified-platform
     env: node
     buildCommand: npm install && npm run build
-    startCommand: ./scripts/start-production-optimized.sh
+    startCommand: node scripts/start-render-optimized.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -16,11 +16,17 @@ services:
         sync: false
       - key: SESSION_SECRET
         sync: false
+      - key: CORS_ORIGIN
+        value: https://gei.adeptify.es
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: REDIS_URL
         sync: false
       - key: DB_HOST
         sync: false
@@ -32,6 +38,7 @@ services:
         sync: false
     healthCheckPath: /api/health
     autoDeploy: true
+    plan: starter
 
   # Base de datos PostgreSQL
   - type: pserv

@@ -50,7 +50,11 @@
     "docker:build": "docker build -t gei-unified-platform .",
     "docker:run": "docker run -p 3000:3000 gei-unified-platform",
     "docker:compose": "docker-compose up -d",
-    "docker:compose:down": "docker-compose down"
+    "docker:compose:down": "docker-compose down",
+    "render:start": "node scripts/start-render-optimized.js",
+    "render:verify": "node scripts/verify-render-deployment.js",
+    "render:diagnose": "node scripts/diagnose-render-production.js",
+    "render:test": "npm run render:verify && npm run render:diagnose"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

@@ -13,20 +13,38 @@ const googleSheetsConfig = {
   redirectUri: `${process.env.BASE_URL || 'http://localhost:3001'}/api/google-sheets/callback`
 };
 
-let googleSheetsService: GoogleSheetsService;
+let googleSheetsService: GoogleSheetsService | null = null;
 
-// Inicializar servicio
+// Inicializar servicio de forma opcional
 try {
-  googleSheetsService = new GoogleSheetsService(googleSheetsConfig);
-  logger.info('✅ Servicio de Google Sheets inicializado');
+  // Verificar que las variables de entorno estén configuradas
+  if (googleSheetsConfig.clientId && googleSheetsConfig.clientSecret) {
+    googleSheetsService = new GoogleSheetsService(googleSheetsConfig);
+    logger.info('✅ Servicio de Google Sheets inicializado');
+  } else {
+    logger.warn('⚠️ Variables de entorno de Google Sheets no configuradas - servicio deshabilitado');
+    logger.warn('📋 Para habilitar Google Sheets, configure GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET');
+  }
 } catch (error) {
   logger.error('❌ Error inicializando Google Sheets:', error);
+  logger.warn('⚠️ Servicio de Google Sheets deshabilitado debido a error de inicialización');
 }
 
+// Middleware para verificar si el servicio está disponible
+const requireGoogleSheetsService = (req: any, res: any, next: any) => {
+  if (!googleSheetsService) {
+    return res.status(503).json({ 
+      error: 'Servicio de Google Sheets no disponible',
+      message: 'El servicio de Google Sheets no está configurado o no está disponible'
+    });
+  }
+  next();
+};
+
 // Obtener URL de autorización
-router.get('/auth', requireAuth, (req, res) => {
+router.get('/auth', requireAuth, requireGoogleSheetsService, (req, res) => {
   try {
-    const authUrl = googleSheetsService.getAuthUrl();
+    const authUrl = googleSheetsService!.getAuthUrl();
     res.json({ authUrl });
   } catch (error) {
     logger.error('Error generando URL de autorización:', error);
@@ -35,7 +53,7 @@ router.get('/auth', requireAuth, (req, res) => {
 });
 
 // Callback de autorización
-router.get('/callback', requireAuth, async (req, res) => {
+router.get('/callback', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { code } = req.query;
     
@@ -43,7 +61,7 @@ router.get('/callback', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Código de autorización requerido' });
     }
 
-    const tokens = await googleSheetsService.getTokensFromCode(code);
+    const tokens = await googleSheetsService!.getTokensFromCode(code);
     
     // Guardar tokens en la sesión del usuario
     (req.session as any).googleTokens = tokens;
@@ -67,7 +85,7 @@ router.get('/callback', requireAuth, async (req, res) => {
 });
 
 // Crear nueva hoja de cálculo
-router.post('/create', requireAuth, async (req, res) => {
+router.post('/create', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { title, description } = req.body;
     
@@ -75,7 +93,7 @@ router.post('/create', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Título requerido' });
     }
 
-    const spreadsheetId = await googleSheetsService.createSpreadsheet(title, description);
+    const spreadsheetId = await googleSheetsService!.createSpreadsheet(title, description);
     
     await createAuditLog({
       userId: req.user!.id,
@@ -87,7 +105,7 @@ router.post('/create', requireAuth, async (req, res) => {
     res.json({ 
       success: true, 
       spreadsheetId,
-      url: googleSheetsService.getSpreadsheetUrl(spreadsheetId)
+      url: googleSheetsService!.getSpreadsheetUrl(spreadsheetId)
     });
   } catch (error) {
     logger.error('Error creando hoja de cálculo:', error);
@@ -96,7 +114,7 @@ router.post('/create', requireAuth, async (req, res) => {
 });
 
 // Exportar competencias
-router.post('/export/competencies', requireAuth, async (req, res) => {
+router.post('/export/competencies', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { spreadsheetId, options = {} } = req.body;
     
@@ -104,7 +122,7 @@ router.post('/export/competencies', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'ID de hoja requerido' });
     }
 
-    await googleSheetsService.exportCompetencies(
+    await googleSheetsService!.exportCompetencies(
       spreadsheetId, 
       req.user!.instituteId, 
       options
@@ -120,7 +138,7 @@ router.post('/export/competencies', requireAuth, async (req, res) => {
     res.json({ 
       success: true, 
       message: 'Competencias exportadas exitosamente',
-      url: googleSheetsService.getSpreadsheetUrl(spreadsheetId)
+      url: googleSheetsService!.getSpreadsheetUrl(spreadsheetId)
     });
   } catch (error) {
     logger.error('Error exportando competencias:', error);
@@ -129,7 +147,7 @@ router.post('/export/competencies', requireAuth, async (req, res) => {
 });
 
 // Exportar evaluaciones
-router.post('/export/evaluations', requireAuth, async (req, res) => {
+router.post('/export/evaluations', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { spreadsheetId, options = {} } = req.body;
     
@@ -137,7 +155,7 @@ router.post('/export/evaluations', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'ID de hoja requerido' });
     }
 
-    await googleSheetsService.exportEvaluations(
+    await googleSheetsService!.exportEvaluations(
       spreadsheetId, 
       req.user!.instituteId, 
       options
@@ -153,7 +171,7 @@ router.post('/export/evaluations', requireAuth, async (req, res) => {
     res.json({ 
       success: true, 
       message: 'Evaluaciones exportadas exitosamente',
-      url: googleSheetsService.getSpreadsheetUrl(spreadsheetId)
+      url: googleSheetsService!.getSpreadsheetUrl(spreadsheetId)
     });
   } catch (error) {
     logger.error('Error exportando evaluaciones:', error);
@@ -162,7 +180,7 @@ router.post('/export/evaluations', requireAuth, async (req, res) => {
 });
 
 // Exportar asistencia
-router.post('/export/attendance', requireAuth, async (req, res) => {
+router.post('/export/attendance', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { spreadsheetId, options = {} } = req.body;
     
@@ -170,7 +188,7 @@ router.post('/export/attendance', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'ID de hoja requerido' });
     }
 
-    await googleSheetsService.exportAttendance(
+    await googleSheetsService!.exportAttendance(
       spreadsheetId, 
       req.user!.instituteId, 
       options
@@ -186,7 +204,7 @@ router.post('/export/attendance', requireAuth, async (req, res) => {
     res.json({ 
       success: true, 
       message: 'Asistencia exportada exitosamente',
-      url: googleSheetsService.getSpreadsheetUrl(spreadsheetId)
+      url: googleSheetsService!.getSpreadsheetUrl(spreadsheetId)
     });
   } catch (error) {
     logger.error('Error exportando asistencia:', error);
@@ -195,18 +213,18 @@ router.post('/export/attendance', requireAuth, async (req, res) => {
 });
 
 // Exportar todo (competencies + evaluations + attendance)
-router.post('/export/all', requireAuth, async (req, res) => {
+router.post('/export/all', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { title = 'GEI Platform - Datos Completos', options = {} } = req.body;
     
     // Crear nueva hoja
-    const spreadsheetId = await googleSheetsService.createSpreadsheet(title);
+    const spreadsheetId = await googleSheetsService!.createSpreadsheet(title);
     
     // Exportar todos los datos
     await Promise.all([
-      googleSheetsService.exportCompetencies(spreadsheetId, req.user!.instituteId, options),
-      googleSheetsService.exportEvaluations(spreadsheetId, req.user!.instituteId, options),
-      googleSheetsService.exportAttendance(spreadsheetId, req.user!.instituteId, options)
+      googleSheetsService!.exportCompetencies(spreadsheetId, req.user!.instituteId, options),
+      googleSheetsService!.exportEvaluations(spreadsheetId, req.user!.instituteId, options),
+      googleSheetsService!.exportAttendance(spreadsheetId, req.user!.instituteId, options)
     ]);
     
     await createAuditLog({
@@ -220,7 +238,7 @@ router.post('/export/all', requireAuth, async (req, res) => {
       success: true, 
       message: 'Datos exportados exitosamente',
       spreadsheetId,
-      url: googleSheetsService.getSpreadsheetUrl(spreadsheetId)
+      url: googleSheetsService!.getSpreadsheetUrl(spreadsheetId)
     });
   } catch (error) {
     logger.error('Error exportando todos los datos:', error);
@@ -229,7 +247,7 @@ router.post('/export/all', requireAuth, async (req, res) => {
 });
 
 // Importar datos
-router.post('/import', requireAuth, async (req, res) => {
+router.post('/import', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { spreadsheetId, range, options } = req.body;
     
@@ -239,7 +257,7 @@ router.post('/import', requireAuth, async (req, res) => {
       });
     }
 
-    const importedData = await googleSheetsService.importFromSheet(
+    const importedData = await googleSheetsService!.importFromSheet(
       spreadsheetId, 
       range, 
       options
@@ -265,7 +283,7 @@ router.post('/import', requireAuth, async (req, res) => {
 });
 
 // Compartir hoja
-router.post('/share', requireAuth, async (req, res) => {
+router.post('/share', requireAuth, requireGoogleSheetsService, async (req, res) => {
   try {
     const { spreadsheetId, email, role = 'reader' } = req.body;
     
@@ -275,7 +293,7 @@ router.post('/share', requireAuth, async (req, res) => {
       });
     }
 
-    await googleSheetsService.shareSpreadsheet(spreadsheetId, email, role);
+    await googleSheetsService!.shareSpreadsheet(spreadsheetId, email, role);
     
     await createAuditLog({
       userId: req.user!.id,
@@ -295,10 +313,10 @@ router.post('/share', requireAuth, async (req, res) => {
 });
 
 // Obtener URL de hoja
-router.get('/url/:spreadsheetId', requireAuth, (req, res) => {
+router.get('/url/:spreadsheetId', requireAuth, requireGoogleSheetsService, (req, res) => {
   try {
     const { spreadsheetId } = req.params;
-    const url = googleSheetsService.getSpreadsheetUrl(spreadsheetId);
+    const url = googleSheetsService!.getSpreadsheetUrl(spreadsheetId);
     
     res.json({ url });
   } catch (error) {
