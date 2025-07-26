@@ -1,3 +1,9 @@
+// LOG INMEDIATO - INICIO DEL ARCHIVO
+console.log('🔥🔥🔥 INICIO DE server/index.ts - ARCHIVO CARGÁNDOSE 🔥🔥🔥');
+console.log(`🔥 Timestamp: ${new Date().toISOString()}`);
+console.log(`🔥 NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`🔥 __filename: ${import.meta.url}`);
+
 import express from 'express';
 import session from 'express-session';
 import passport from 'passport';
@@ -15,6 +21,7 @@ import fs from 'fs';
 
 // Configuración de variables de entorno
 config();
+console.log('🔥🔥🔥 dotenv configurado 🔥🔥🔥');
 
 // Configuración de rutas de archivos
 const __filename = fileURLToPath(import.meta.url);
@@ -35,6 +42,10 @@ import { aiChatbotService } from './services/ai-chatbot-service.js';
 import { aiAnalyticsService } from './services/ai-analytics-service.js';
 import { aiReportGeneratorService } from './services/ai-report-generator.js';
 import { calendarService } from './services/calendar-service.js';
+
+console.log('🔥🔥🔥 TODAS LAS IMPORTACIONES COMPLETADAS 🔥🔥🔥');
+console.log(`🔥 logger disponible: ${typeof logger}`);
+console.log(`🔥 initializeDatabase disponible: ${typeof initializeDatabase}`);
 
 // Configuración de la aplicación
 const app = express();
@@ -771,4 +782,15 @@ process.on('SIGINT', async () => {
 });
 
 // Inicializar aplicación
-initializeApp(); 
+console.log('🔥🔥🔥 ANTES DE LLAMAR A initializeApp() 🔥🔥🔥');
+console.log(`🔥 Timestamp: ${new Date().toISOString()}`);
+console.log(`🔥 typeof initializeApp: ${typeof initializeApp}`);
+
+try {
+  initializeApp();
+  console.log('🔥🔥🔥 initializeApp() LLAMADA EXITOSAMENTE 🔥🔥🔥');
+} catch (error) {
+  console.error('🔥🔥🔥 ERROR AL LLAMAR initializeApp():', error);
+  console.error('🔥 Stack:', error instanceof Error ? error.stack : 'No stack');
+  process.exit(1);
+} 
