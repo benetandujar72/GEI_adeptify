@@ -43,6 +43,7 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: undefined, // Deshabilitar manualChunks para evitar problemas
       },
+      external: [], // Asegurar que FullCalendar no se marque como externo
     },
     // Configuraciones adicionales para Docker
     target: 'es2015',
@@ -57,6 +58,17 @@ export default defineConfig({
   },
   // Configuración para evitar problemas en Docker
   optimizeDeps: {
-    include: ['react', 'react-dom', 'wouter', '@tanstack/react-query', 'sonner']
+    include: [
+      'react', 
+      'react-dom', 
+      'wouter', 
+      '@tanstack/react-query', 
+      'sonner',
+      '@fullcalendar/react',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/interaction',
+      '@fullcalendar/core'
+    ]
   }
 }); 
