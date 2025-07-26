@@ -35,6 +35,7 @@ RUN mkdir -p client/src/pages/adeptify client/src/pages/assistatut && \
 
 # Crear archivos mínimos si no existen para evitar errores de build
 RUN echo "=== Creando archivos mínimos si no existen ===" && \
+    mkdir -p client/src/pages/adeptify client/src/pages/assistatut client/src/components/ui && \
     if [ ! -f "client/src/pages/adeptify/Competencies.tsx" ]; then \
         echo "import React from 'react'; export default function Competencies() { return <div>Competencies Page</div>; }" > client/src/pages/adeptify/Competencies.tsx; \
     fi && \
