@@ -1,3 +1,7 @@
+// TEMPORALMENTE DESHABILITADO - Google Sheets
+// Se reactivará cuando se configuren las variables de entorno
+
+/*
 import { Router } from 'express';
 import { GoogleSheetsService } from '../services/google-sheets-service.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -231,7 +235,7 @@ router.post('/export/all', requireAuth, requireGoogleSheetsService, async (req, 
       userId: req.user!.id,
       instituteId: req.user!.instituteId,
       action: 'google_sheets_export_all',
-      details: `Exportación completa a ${spreadsheetId}`
+      details: `Todos los datos exportados a ${spreadsheetId}`
     });
 
     res.json({ 
@@ -251,10 +255,8 @@ router.post('/import', requireAuth, requireGoogleSheetsService, async (req, res)
   try {
     const { spreadsheetId, range, options } = req.body;
     
-    if (!spreadsheetId || !range || !options) {
-      return res.status(400).json({ 
-        error: 'ID de hoja, rango y opciones requeridos' 
-      });
+    if (!spreadsheetId || !range) {
+      return res.status(400).json({ error: 'ID de hoja y rango requeridos' });
     }
 
     const importedData = await googleSheetsService!.importFromSheet(
@@ -267,13 +269,12 @@ router.post('/import', requireAuth, requireGoogleSheetsService, async (req, res)
       userId: req.user!.id,
       instituteId: req.user!.instituteId,
       action: 'google_sheets_import',
-      details: `${importedData.length} filas importadas desde ${spreadsheetId}`
+      details: `Datos importados desde ${spreadsheetId}`
     });
 
     res.json({ 
       success: true, 
       message: 'Datos importados exitosamente',
-      count: importedData.length,
       data: importedData
     });
   } catch (error) {
@@ -288,9 +289,7 @@ router.post('/share', requireAuth, requireGoogleSheetsService, async (req, res) 
     const { spreadsheetId, email, role = 'reader' } = req.body;
     
     if (!spreadsheetId || !email) {
-      return res.status(400).json({ 
-        error: 'ID de hoja y email requeridos' 
-      });
+      return res.status(400).json({ error: 'ID de hoja y email requeridos' });
     }
 
     await googleSheetsService!.shareSpreadsheet(spreadsheetId, email, role);
@@ -299,7 +298,7 @@ router.post('/share', requireAuth, requireGoogleSheetsService, async (req, res) 
       userId: req.user!.id,
       instituteId: req.user!.instituteId,
       action: 'google_sheets_share',
-      details: `Hoja ${spreadsheetId} compartida con ${email} (${role})`
+      details: `Hoja ${spreadsheetId} compartida con ${email}`
     });
 
     res.json({ 
@@ -320,9 +319,23 @@ router.get('/url/:spreadsheetId', requireAuth, requireGoogleSheetsService, (req,
     
     res.json({ url });
   } catch (error) {
-    logger.error('Error obteniendo URL:', error);
-    res.status(500).json({ error: 'Error al obtener URL' });
+    logger.error('Error obteniendo URL de hoja:', error);
+    res.status(500).json({ error: 'Error al obtener URL de hoja' });
   }
+});
+
+export default router;
+*/
+
+// Router temporal vacío
+import { Router } from 'express';
+const router = Router();
+
+router.get('/status', (req, res) => {
+  res.json({ 
+    status: 'disabled',
+    message: 'Google Sheets temporalmente deshabilitado. Se reactivará cuando se configuren las variables de entorno.'
+  });
 });
 
 export default router; 
