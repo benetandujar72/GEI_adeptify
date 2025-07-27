@@ -10,7 +10,7 @@ import {
   guardDuties,
   attendance,
   notifications
-} from '@/shared/schema.js';
+} from '../../shared/schema.js';
 import { eq, and, count, desc, sql } from 'drizzle-orm';
 import { logger } from '../utils/logger.js';
 

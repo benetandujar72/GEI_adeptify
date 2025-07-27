@@ -55,6 +55,7 @@ export function setupRoutes(): Router {
   router.use('/communication', communicationRoutes);
   router.use('/schedule', scheduleRoutes);
   router.use('/dashboard', dashboardRoutes);
+  console.log('✅ Dashboard routes mounted successfully');
   
   // Integraciones externas
   // router.use('/google-sheets', googleSheetsRoutes); // TEMPORALMENTE DESHABILITADO
