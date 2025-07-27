@@ -18,7 +18,7 @@ import attendanceCoreRoutes from './attendance-core.js';
 import communicationRoutes from './communication.js';
 import scheduleRoutes from './schedule.js';
 import dashboardRoutes from './dashboard.js';
-// import googleSheetsRoutes from './google-sheets.js';
+// import googleSheetsRoutes from './google-sheets.js'; // COMPLETAMENTE DESHABILITADO
 import auditRoutes from './audit.js';
 import reportRoutes from './reports.js';
 import exportRoutes from './export.js';
@@ -58,7 +58,7 @@ export function setupRoutes(): Router {
   console.log('✅ Dashboard routes mounted successfully');
   
   // Integraciones externas
-  // router.use('/google-sheets', googleSheetsRoutes); // TEMPORALMENTE DESHABILITADO
+  // router.use('/google-sheets', googleSheetsRoutes); // COMPLETAMENTE DESHABILITADO
   
   // Sistema de auditoría
   router.use('/audit', auditRoutes);

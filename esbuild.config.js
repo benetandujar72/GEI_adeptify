@@ -18,8 +18,8 @@ const externalDependencies = [
   // Dependencias de Drizzle
   'drizzle-orm', 'drizzle-orm/postgres-js', 'drizzle-orm/neon-serverless',
   
-  // Dependencias de Google APIs
-  'googleapis',
+  // Dependencias de Google APIs - DESHABILITADO
+  // 'googleapis',
   
   // Dependencias de AI
   '@anthropic-ai/sdk', '@google/generative-ai', 'openai',
