@@ -6,7 +6,7 @@ services:
     name: gei-unified-platform
     env: node
     buildCommand: npm install && npm run build
-    startCommand: node scripts/start-render-direct.js
+    startCommand: node scripts/start-production-improved.js
     envVars:
       - key: NODE_ENV
         value: production
