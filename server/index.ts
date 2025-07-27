@@ -3,6 +3,29 @@ console.log('🔥🔥🔥 INICIO DE server/index.ts - ARCHIVO CARGÁNDOSE 🔥�
 console.log(`🔥 Timestamp: ${new Date().toISOString()}`);
 console.log(`🔥 NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`🔥 __filename: ${import.meta.url}`);
+console.log(`🔥 process.cwd(): ${process.cwd()}`);
+console.log(`🔥 __dirname: ${import.meta.url}`);
+
+// Verificar archivos críticos antes de importar
+import fs from 'fs';
+import path from 'path';
+
+console.log('🔍 Verificando archivos críticos antes de importar...');
+const criticalPaths = [
+  'shared/schema.ts',
+  'server/database/init.ts',
+  'server/auth/passport.ts'
+];
+
+criticalPaths.forEach(filePath => {
+  try {
+    const fullPath = path.resolve(process.cwd(), filePath);
+    const exists = fs.existsSync(fullPath);
+    console.log(`📂 ${filePath}: ${exists ? '✅ EXISTE' : '❌ NO EXISTE'} (${fullPath})`);
+  } catch (error) {
+    console.log(`❌ Error verificando ${filePath}:`, error);
+  }
+});
 
 import express from 'express';
 import session from 'express-session';
@@ -15,19 +38,7 @@ import { WebSocketServer } from 'ws';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { config } from 'dotenv';
-import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
-
-// Configuración de variables de entorno
-config();
-console.log('🔥🔥🔥 dotenv configurado 🔥🔥🔥');
-
-// Configuración de rutas de archivos
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Importaciones de servicios
 import { initializeDatabase, db, sql } from './database/init.js';
 import { setupPassport } from './auth/passport.js';
 import { setupRoutes } from './routes/index.js';
@@ -42,6 +53,14 @@ import { aiChatbotService } from './services/ai-chatbot-service.js';
 import { aiAnalyticsService } from './services/ai-analytics-service.js';
 import { aiReportGeneratorService } from './services/ai-report-generator.js';
 import { calendarService } from './services/calendar-service.js';
+
+// Configuración de variables de entorno
+config();
+console.log('🔥🔥🔥 dotenv configurado 🔥🔥🔥');
+
+// Configuración de rutas de archivos
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 console.log('🔥🔥🔥 TODAS LAS IMPORTACIONES COMPLETADAS 🔥🔥🔥');
 console.log(`🔥 logger disponible: ${typeof logger}`);
@@ -583,22 +602,40 @@ async function initializeApp() {
     logger.info(`🌍 NODE_ENV: ${process.env.NODE_ENV}`);
     logger.info(`🔌 PORT: ${port}`);
     logger.info(`📁 Directorio actual: ${__dirname}`);
+    logger.info(`📁 process.cwd(): ${process.cwd()}`);
     
     // Verificar archivos críticos
     logger.info('🔍 Verificando archivos críticos...');
     const distPath = path.join(__dirname, 'dist');
     const sharedPath = path.join(__dirname, '..', 'shared');
+    const serverPath = path.join(__dirname, 'server');
+    
+    logger.info(`📂 Verificando distPath: ${distPath}`);
+    logger.info(`📂 Verificando sharedPath: ${sharedPath}`);
+    logger.info(`📂 Verificando serverPath: ${serverPath}`);
     
     if (fs.existsSync(distPath)) {
       logger.info('✅ Directorio dist existe');
+      const distFiles = fs.readdirSync(distPath);
+      logger.info(`📋 Archivos en dist: ${distFiles.join(', ')}`);
     } else {
       logger.error('❌ Directorio dist no existe');
     }
     
     if (fs.existsSync(sharedPath)) {
       logger.info('✅ Directorio shared existe');
+      const sharedFiles = fs.readdirSync(sharedPath);
+      logger.info(`📋 Archivos en shared: ${sharedFiles.join(', ')}`);
     } else {
       logger.error('❌ Directorio shared no existe');
+    }
+    
+    if (fs.existsSync(serverPath)) {
+      logger.info('✅ Directorio server existe');
+      const serverFiles = fs.readdirSync(serverPath);
+      logger.info(`📋 Archivos en server: ${serverFiles.join(', ')}`);
+    } else {
+      logger.error('❌ Directorio server no existe');
     }
     
     // Inicializar base de datos con timeout
@@ -726,7 +763,13 @@ async function initializeApp() {
       message: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString()
     });
-    process.exit(1);
+    
+    // Esperar antes de salir para que se vean los logs
+    logger.info('🔄 Esperando 10 segundos antes de salir...');
+    setTimeout(() => {
+      logger.error('🔥🔥🔥 TERMINANDO PROCESO DUE TO INITIALIZATION ERROR 🔥🔥🔥');
+      process.exit(1);
+    }, 10000);
   }
 }
 

@@ -111,6 +111,24 @@ function startServer(retryCount = 0) {
   
   console.log(`🔄 Iniciando servidor (intento ${retryCount + 1}/${maxRetries + 1})...`);
   console.log(`📂 Ejecutando: node dist/index.js`);
+  console.log(`🔍 Verificando contenido de dist/index.js...`);
+  
+  try {
+    const stats = fs.statSync('dist/index.js');
+    console.log(`📊 Tamaño del archivo: ${stats.size} bytes`);
+    
+    if (stats.size < 1000) {
+      console.error('❌ El archivo dist/index.js es demasiado pequeño, posible build corrupto');
+      console.log('🔄 Esperando 10 segundos antes de salir...');
+      setTimeout(() => process.exit(1), 10000);
+      return;
+    }
+  } catch (error) {
+    console.error('❌ Error verificando dist/index.js:', error);
+    console.log('🔄 Esperando 10 segundos antes de salir...');
+    setTimeout(() => process.exit(1), 10000);
+    return;
+  }
   
   const server = spawn('node', ['dist/index.js'], {
     stdio: 'inherit',
@@ -121,7 +139,14 @@ function startServer(retryCount = 0) {
     }
   });
   
+  // Agregar timeout para detectar si el servidor no responde
+  const startupTimeout = setTimeout(() => {
+    console.error('⏰ Timeout: El servidor no respondió en 30 segundos');
+    server.kill('SIGKILL');
+  }, 30000);
+  
   server.on('error', (error) => {
+    clearTimeout(startupTimeout);
     console.error('❌ Error al iniciar servidor:', error.message);
     console.error('📋 Stack trace:', error.stack);
     
@@ -136,6 +161,7 @@ function startServer(retryCount = 0) {
   });
   
   server.on('exit', (code) => {
+    clearTimeout(startupTimeout);
     console.log(`🛑 Servidor terminado con código: ${code}`);
     
     if (code === 0) {
@@ -152,6 +178,7 @@ function startServer(retryCount = 0) {
   
   // Manejo de señales para cierre graceful
   const gracefulShutdown = (signal) => {
+    clearTimeout(startupTimeout);
     console.log(`🛑 Recibida señal ${signal}, cerrando servidor...`);
     server.kill(signal);
     
