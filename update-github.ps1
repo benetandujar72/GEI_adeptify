@@ -11,12 +11,7 @@ git add .
 
 # Hacer commit con mensaje descriptivo
 Write-Host "3. Haciendo commit..." -ForegroundColor Yellow
-$commitMessage = "fix: Corregir error de importación useApi en Calendar component
-
-- Agregar hook useApi faltante en useApi.ts
-- Corregir importación en Calendar.tsx
-- Instalar dependencias FullCalendar
-- Mejorar manejo de parámetros en API calls"
+$commitMessage = "Update deployment scripts: fixes and improvements to fix-deployment-issues.js, fix-deployment.ps1, simple-deployment-fix.cjs, start-production-improved.js, and verify-database-connection.js"
 
 git commit -m $commitMessage
 
