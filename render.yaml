@@ -1,45 +1,54 @@
 services:
   - type: web
-    name: eduai-platform-frontend
+    name: eduai-platform
     env: node
-    buildCommand: cd client && npm install && npm run build
-    startCommand: cd client && npm start
+    plan: starter
+    buildCommand: |
+      cd server
+      npm ci
+      npm run build
+    startCommand: |
+      cd server
+      chmod +x start.sh
+      ./start.sh
     envVars:
       - key: NODE_ENV
         value: production
-      - key: VITE_API_URL
-        value: https://api.eduai-platform.com
-      - key: VITE_MCP_URL
-        value: https://eduai-platform.com
-
-  - type: web
-    name: eduai-platform-api
-    env: docker
-    dockerfilePath: ./Dockerfile.api
-    envVars:
-      - key: NODE_ENV
-        value: production
+      - key: PORT
+        value: 3000
       - key: DATABASE_URL
-        fromDatabase:
-          name: eduai-platform-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: eduai-platform-redis
-          property: connectionString
-
-  - type: redis
-    name: eduai-platform-redis
-    ipAllowList: []
-
-  - type: pserv
-    name: eduai-platform-db
-    env: postgres
-    plan: standard-0
-    ipAllowList: []
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FRONTEND_URL
+        value: https://eduai-platform.com
+      - key: LOG_LEVEL
+        value: info
+      - key: ENABLE_METRICS
+        value: true
+    healthCheckPath: /health
+    autoDeploy: true
 
 databases:
-  - name: eduai-platform-db
-    databaseName: eduai_platform_prod
-    user: eduai_user
+  - name: eduai-postgres
+    databaseName: eduai
+    user: postgres
+    plan: starter
+
+  - name: eduai-redis
+    databaseName: redis
+    plan: starter
