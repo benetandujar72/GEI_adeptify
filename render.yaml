@@ -1,59 +1,45 @@
-# Render configuration for GEI Unified Platform
-# Despliegue automático optimizado para producción
-
 services:
   - type: web
-    name: gei-unified-platform
+    name: eduai-platform-frontend
     env: node
-    buildCommand: npm install && npm run build
-    startCommand: node scripts/start-production-improved.js
+    buildCommand: cd client && npm install && npm run build
+    startCommand: cd client && npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
-      - key: DATABASE_URL
-        sync: false
-      - key: SESSION_SECRET
-        sync: false
-      - key: CORS_ORIGIN
-        value: https://gei.adeptify.es
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: DB_HOST
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-    healthCheckPath: /api/health
-    autoDeploy: true
-    plan: starter
+      - key: VITE_API_URL
+        value: https://api.eduai-platform.com
+      - key: VITE_MCP_URL
+        value: https://eduai-platform.com
 
-  # Base de datos PostgreSQL
-  - type: pserv
-    name: gei-postgres
-    env: postgresql
-    plan: starter
+  - type: web
+    name: eduai-platform-api
+    env: docker
+    dockerfilePath: ./Dockerfile.api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eduai-platform-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: eduai-platform-redis
+          property: connectionString
+
+  - type: redis
+    name: eduai-platform-redis
     ipAllowList: []
-    maxConnections: 10
-    autoDeploy: true
-    branch: main
+
+  - type: pserv
+    name: eduai-platform-db
+    env: postgres
+    plan: standard-0
+    ipAllowList: []
 
 databases:
-  - name: gei-postgres
-    databaseName: gei_unified
-    user: gei_user
-    plan: starter
-    ipAllowList: []
-    autoDeploy: true 
+  - name: eduai-platform-db
+    databaseName: eduai_platform_prod
+    user: eduai_user

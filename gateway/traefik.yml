@@ -1,0 +1,47 @@
+# Traefik Configuration for MCP API Gateway
+api:
+  dashboard: true
+  insecure: false
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: "mcp-network"
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "admin@eduai-platform.com"
+      storage: "/etc/traefik/acme/acme.json"
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: "INFO"
+
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: "json"
+
+metrics:
+  prometheus:
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0 

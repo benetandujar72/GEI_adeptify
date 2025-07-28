@@ -1,0 +1,106 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+    
+    - name: Run linting
+      run: npm run lint
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and push Docker images
+      run: |
+        docker build -t eduai-platform/mcp-orchestrator:latest ./microservices/mcp-orchestrator
+        docker build -t eduai-platform/user-service:latest ./microservices/user-service
+        docker build -t eduai-platform/student-service:latest ./microservices/student-service
+        docker build -t eduai-platform/course-service:latest ./microservices/course-service
+        docker build -t eduai-platform/resource-service:latest ./microservices/resource-service
+        docker build -t eduai-platform/communication-service:latest ./microservices/communication-service
+        docker build -t eduai-platform/analytics-service:latest ./microservices/analytics-service
+        docker build -t eduai-platform/llm-gateway:latest ./microservices/llm-gateway
+        docker build -t eduai-platform/content-generation:latest ./microservices/ai-services/content-generation
+        docker build -t eduai-platform/chatbot:latest ./microservices/ai-services/chatbot
+        docker build -t eduai-platform/predictive-analytics:latest ./microservices/ai-services/predictive-analytics
+        docker build -t eduai-platform/personalization-engine:latest ./microservices/ai-services/personalization-engine
+        docker build -t eduai-platform/ml-pipeline:latest ./microservices/ai-services/ml-pipeline
+        docker build -t eduai-platform/frontend:latest ./client
+        
+        docker push eduai-platform/mcp-orchestrator:latest
+        docker push eduai-platform/user-service:latest
+        docker push eduai-platform/student-service:latest
+        docker push eduai-platform/course-service:latest
+        docker push eduai-platform/resource-service:latest
+        docker push eduai-platform/communication-service:latest
+        docker push eduai-platform/analytics-service:latest
+        docker push eduai-platform/llm-gateway:latest
+        docker push eduai-platform/content-generation:latest
+        docker push eduai-platform/chatbot:latest
+        docker push eduai-platform/predictive-analytics:latest
+        docker push eduai-platform/personalization-engine:latest
+        docker push eduai-platform/ml-pipeline:latest
+        docker push eduai-platform/frontend:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Deploy to Render
+      uses: johnbeynon/render-deploy-action@v1.0.0
+      with:
+        service-id: ${{ secrets.RENDER_SERVICE_ID }}
+        api-key: ${{ secrets.RENDER_API_KEY }}

@@ -1,0 +1,48 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'mcp-orchestrator'
+    static_configs:
+      - targets: ['mcp-orchestrator:3008']
+    metrics_path: '/metrics'
+
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:3001']
+    metrics_path: '/metrics'
+
+  - job_name: 'student-service'
+    static_configs:
+      - targets: ['student-service:3002']
+    metrics_path: '/metrics'
+
+  - job_name: 'course-service'
+    static_configs:
+      - targets: ['course-service:3003']
+    metrics_path: '/metrics'
+
+  - job_name: 'llm-gateway'
+    static_configs:
+      - targets: ['llm-gateway:3004']
+    metrics_path: '/metrics'
+
+  - job_name: 'content-generation'
+    static_configs:
+      - targets: ['content-generation:3005']
+    metrics_path: '/metrics'
+
+  - job_name: 'chatbot'
+    static_configs:
+      - targets: ['chatbot:3006']
+    metrics_path: '/metrics'
+
+  - job_name: 'predictive-analytics'
+    static_configs:
+      - targets: ['predictive-analytics:3007']
+    metrics_path: '/metrics'

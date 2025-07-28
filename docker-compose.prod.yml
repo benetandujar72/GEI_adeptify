@@ -1,0 +1,379 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik-prod
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@eduai-platform.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./gateway/dynamic:/etc/traefik/dynamic
+      - ./gateway/acme:/etc/traefik/acme
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-prod
+    environment:
+      POSTGRES_DB: 
+      POSTGRES_USER: 
+      POSTGRES_PASSWORD: 
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis-prod
+    command: redis-server --requirepass 
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+
+  # MCP Orchestrator
+  mcp-orchestrator:
+    build:
+      context: ./microservices/mcp-orchestrator
+      dockerfile: Dockerfile.prod
+    container_name: mcp-orchestrator-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3008
+      - DATABASE_URL=
+      - REDIS_URL=
+      - JWT_SECRET=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp-orchestrator.rule=Host(${DOMAIN})"
+      - "traefik.http.services.mcp-orchestrator.loadbalancer.server.port=3008"
+      - "traefik.http.routers.mcp-orchestrator.tls.certresolver=letsencrypt"
+
+  # User Service
+  user-service:
+    build:
+      context: ./microservices/user-service
+      dockerfile: Dockerfile.prod
+    container_name: user-service-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=
+      - REDIS_URL=
+      - JWT_SECRET=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-service.rule=Host(pi.) && PathPrefix(/api/v1/users)"
+      - "traefik.http.services.user-service.loadbalancer.server.port=3001"
+      - "traefik.http.routers.user-service.tls.certresolver=letsencrypt"
+
+  # Student Service
+  student-service:
+    build:
+      context: ./microservices/student-service
+      dockerfile: Dockerfile.prod
+    container_name: student-service-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=
+      - REDIS_URL=
+      - JWT_SECRET=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.student-service.rule=Host(pi.) && PathPrefix(/api/v1/students)"
+      - "traefik.http.services.student-service.loadbalancer.server.port=3002"
+      - "traefik.http.routers.student-service.tls.certresolver=letsencrypt"
+
+  # Course Service
+  course-service:
+    build:
+      context: ./microservices/course-service
+      dockerfile: Dockerfile.prod
+    container_name: course-service-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - DATABASE_URL=
+      - REDIS_URL=
+      - JWT_SECRET=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.course-service.rule=Host(pi.) && PathPrefix(/api/v1/courses)"
+      - "traefik.http.services.course-service.loadbalancer.server.port=3003"
+      - "traefik.http.routers.course-service.tls.certresolver=letsencrypt"
+
+  # Resource Service
+  resource-service:
+    build:
+      context: ./microservices/resource-service
+      dockerfile: Dockerfile.prod
+    container_name: resource-service-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3009
+      - DATABASE_URL=
+      - REDIS_URL=
+      - JWT_SECRET=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.resource-service.rule=Host(pi.) && PathPrefix(/api/v1/resources)"
+      - "traefik.http.services.resource-service.loadbalancer.server.port=3009"
+      - "traefik.http.routers.resource-service.tls.certresolver=letsencrypt"
+
+  # Communication Service
+  communication-service:
+    build:
+      context: ./microservices/communication-service
+      dockerfile: Dockerfile.prod
+    container_name: communication-service-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+      - DATABASE_URL=
+      - REDIS_URL=
+      - JWT_SECRET=
+      - SMTP_HOST=
+      - SMTP_PORT=
+      - SMTP_USER=
+      - SMTP_PASS=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.communication-service.rule=Host(pi.) && PathPrefix(/api/v1/communications)"
+      - "traefik.http.services.communication-service.loadbalancer.server.port=3010"
+      - "traefik.http.routers.communication-service.tls.certresolver=letsencrypt"
+
+  # Analytics Service
+  analytics-service:
+    build:
+      context: ./microservices/analytics-service
+      dockerfile: Dockerfile.prod
+    container_name: analytics-service-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3011
+      - DATABASE_URL=
+      - REDIS_URL=
+      - JWT_SECRET=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.analytics-service.rule=Host(pi.) && PathPrefix(/api/v1/analytics)"
+      - "traefik.http.services.analytics-service.loadbalancer.server.port=3011"
+      - "traefik.http.routers.analytics-service.tls.certresolver=letsencrypt"
+
+  # AI Services
+  llm-gateway:
+    build:
+      context: ./microservices/llm-gateway
+      dockerfile: Dockerfile.prod
+    container_name: llm-gateway-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - DATABASE_URL=
+      - REDIS_URL=
+      - ANTHROPIC_API_KEY=
+      - GOOGLE_API_KEY=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.llm-gateway.rule=Host(pi.) && PathPrefix(/api/ai/llm)"
+      - "traefik.http.services.llm-gateway.loadbalancer.server.port=3004"
+      - "traefik.http.routers.llm-gateway.tls.certresolver=letsencrypt"
+
+  content-generation:
+    build:
+      context: ./microservices/ai-services/content-generation
+      dockerfile: Dockerfile.prod
+    container_name: content-generation-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - DATABASE_URL=
+      - REDIS_URL=
+      - ANTHROPIC_API_KEY=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.content-generation.rule=Host(pi.) && PathPrefix(/api/ai/content)"
+      - "traefik.http.services.content-generation.loadbalancer.server.port=3005"
+      - "traefik.http.routers.content-generation.tls.certresolver=letsencrypt"
+
+  chatbot:
+    build:
+      context: ./microservices/ai-services/chatbot
+      dockerfile: Dockerfile.prod
+    container_name: chatbot-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3006
+      - DATABASE_URL=
+      - REDIS_URL=
+      - ANTHROPIC_API_KEY=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatbot.rule=Host(pi.) && PathPrefix(/api/ai/chatbot)"
+      - "traefik.http.services.chatbot.loadbalancer.server.port=3006"
+      - "traefik.http.routers.chatbot.tls.certresolver=letsencrypt"
+
+  predictive-analytics:
+    build:
+      context: ./microservices/ai-services/predictive-analytics
+      dockerfile: Dockerfile.prod
+    container_name: predictive-analytics-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3007
+      - DATABASE_URL=
+      - REDIS_URL=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.predictive-analytics.rule=Host(pi.) && PathPrefix(/api/ai/analytics)"
+      - "traefik.http.services.predictive-analytics.loadbalancer.server.port=3007"
+      - "traefik.http.routers.predictive-analytics.tls.certresolver=letsencrypt"
+
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile.prod
+    container_name: personalization-engine-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3012
+      - DATABASE_URL=
+      - REDIS_URL=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(pi.) && PathPrefix(/api/ai/personalization)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+      - "traefik.http.routers.personalization-engine.tls.certresolver=letsencrypt"
+
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile.prod
+    container_name: ml-pipeline-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3013
+      - DATABASE_URL=
+      - REDIS_URL=
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(pi.) && PathPrefix(/api/ai/ml)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+      - "traefik.http.routers.ml-pipeline.tls.certresolver=letsencrypt"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.prod
+    container_name: frontend-prod
+    environment:
+      - VITE_API_URL=https://api.
+      - VITE_MCP_URL=https://
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(${DOMAIN})"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-prod
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(monitoring.)"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-prod
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - mcp-network-prod
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(dashboard.)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+
+networks:
+  mcp-network-prod:
+    driver: bridge

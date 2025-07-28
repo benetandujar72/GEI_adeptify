@@ -1,0 +1,1175 @@
+version: '3.8'
+
+services:
+  # ===== API GATEWAY =====
+  traefik:
+    image: traefik:v3.0
+    container_name: mcp-traefik
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Dashboard
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./gateway/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./gateway/dynamic:/etc/traefik/dynamic:ro
+      - ./gateway/acme:/etc/traefik/acme
+      - ./gateway/logs:/var/log/traefik
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=admin:$$2y$$10$$H6usinMcxnWJBPNY4ZxjI.9I9/RxUeFNDeAxupH9otKJwtNJpCErri"
+    restart: unless-stopped
+
+  # ===== DATABASE =====
+  postgres:
+    image: postgres:15-alpine
+    container_name: mcp-postgres
+    environment:
+      POSTGRES_DB: eduai_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+      - ./database/backups:/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - mcp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===== REDIS =====
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-redis
+    command: redis-server --appendonly yes --requirepass redis123
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - mcp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===== MCP ORCHESTRATOR =====
+  mcp-orchestrator:
+    build:
+      context: ./microservices/mcp-orchestrator
+      dockerfile: Dockerfile
+    container_name: mcp-orchestrator
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: mcp-orchestrator-secret-key-dev
+      JWT_REFRESH_SECRET: mcp-orchestrator-refresh-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      LOG_LEVEL: debug
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/mcp-orchestrator:/app
+      - /app/node_modules
+    ports:
+      - "3008:3008"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp-orchestrator.rule=Host(`mcp.localhost`)"
+      - "traefik.http.routers.mcp-orchestrator.service=mcp-orchestrator"
+      - "traefik.http.services.mcp-orchestrator.loadbalancer.server.port=3008"
+      - "traefik.http.routers.mcp-orchestrator.middlewares=mcp-cors"
+      - "traefik.http.middlewares.mcp-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.mcp-cors.headers.accesscontrolalloworiginlist=http://localhost:3000,http://localhost:5173"
+      - "traefik.http.middlewares.mcp-cors.headers.accesscontrolallowheaders=Content-Type,Authorization,X-Requested-With"
+      - "traefik.http.middlewares.mcp-cors.headers.accesscontrolallowcredentials=true"
+
+  # ===== USER SERVICE =====
+  user-service:
+    build:
+      context: ./microservices/user-service
+      dockerfile: Dockerfile
+    container_name: mcp-user-service
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: user-service-secret-key-dev
+      JWT_REFRESH_SECRET: user-service-refresh-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      MCP_ORCHESTRATOR_URL: http://mcp-orchestrator:3008
+      LOG_LEVEL: debug
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USER: 
+      SMTP_PASS: 
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/user-service:/app
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-orchestrator:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-service.rule=Host(`api.localhost`) && PathPrefix(`/api/v1/users`)"
+      - "traefik.http.routers.user-service.service=user-service"
+      - "traefik.http.services.user-service.loadbalancer.server.port=3001"
+      - "traefik.http.routers.user-service.middlewares=user-cors,user-auth"
+      - "traefik.http.middlewares.user-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.user-cors.headers.accesscontrolalloworiginlist=http://localhost:3000,http://localhost:5173"
+      - "traefik.http.middlewares.user-cors.headers.accesscontrolallowheaders=Content-Type,Authorization,X-Requested-With"
+      - "traefik.http.middlewares.user-cors.headers.accesscontrolallowcredentials=true"
+
+  # ===== STUDENT SERVICE =====
+  student-service:
+    build:
+      context: ./microservices/student-service
+      dockerfile: Dockerfile
+    container_name: mcp-student-service
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: student-service-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      MCP_ORCHESTRATOR_URL: http://mcp-orchestrator:3008
+      USER_SERVICE_URL: http://user-service:3001
+      LOG_LEVEL: debug
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/student-service:/app
+      - /app/node_modules
+    ports:
+      - "3002:3002"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-orchestrator:
+        condition: service_started
+      user-service:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.student-service.rule=Host(`api.localhost`) && PathPrefix(`/api/v1/students`)"
+      - "traefik.http.routers.student-service.service=student-service"
+      - "traefik.http.services.student-service.loadbalancer.server.port=3002"
+
+  # ===== COURSE SERVICE =====
+  course-service:
+    build:
+      context: ./microservices/course-service
+      dockerfile: Dockerfile
+    container_name: mcp-course-service
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: course-service-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      MCP_ORCHESTRATOR_URL: http://mcp-orchestrator:3008
+      USER_SERVICE_URL: http://user-service:3001
+      LOG_LEVEL: debug
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/course-service:/app
+      - /app/node_modules
+    ports:
+      - "3003:3003"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-orchestrator:
+        condition: service_started
+      user-service:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.course-service.rule=Host(`api.localhost`) && PathPrefix(`/api/v1/courses`)"
+      - "traefik.http.routers.course-service.service=course-service"
+      - "traefik.http.services.course-service.loadbalancer.server.port=3003"
+
+  # ===== LLM GATEWAY =====
+  llm-gateway:
+    build:
+      context: ./microservices/llm-gateway
+      dockerfile: Dockerfile
+    container_name: mcp-llm-gateway
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: llm-gateway-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      MCP_ORCHESTRATOR_URL: http://mcp-orchestrator:3008
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LOG_LEVEL: debug
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/llm-gateway:/app
+      - /app/node_modules
+    ports:
+      - "3004:3004"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-orchestrator:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.llm-gateway.rule=Host(`api.localhost`) && PathPrefix(`/api/ai/llm`)"
+      - "traefik.http.routers.llm-gateway.service=llm-gateway"
+      - "traefik.http.services.llm-gateway.loadbalancer.server.port=3004"
+
+  # ===== AI SERVICES =====
+  content-generation:
+    build:
+      context: ./microservices/ai-services/content-generation
+      dockerfile: Dockerfile
+    container_name: mcp-content-generation
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: content-generation-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      MCP_ORCHESTRATOR_URL: http://mcp-orchestrator:3008
+      LLM_GATEWAY_URL: http://llm-gateway:3004
+      LOG_LEVEL: debug
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/ai-services/content-generation:/app
+      - /app/node_modules
+    ports:
+      - "3005:3005"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-orchestrator:
+        condition: service_started
+      llm-gateway:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.content-generation.rule=Host(`api.localhost`) && PathPrefix(`/api/ai/content`)"
+      - "traefik.http.routers.content-generation.service=content-generation"
+      - "traefik.http.services.content-generation.loadbalancer.server.port=3005"
+
+  chatbot:
+    build:
+      context: ./microservices/ai-services/chatbot
+      dockerfile: Dockerfile
+    container_name: mcp-chatbot
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: chatbot-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      MCP_ORCHESTRATOR_URL: http://mcp-orchestrator:3008
+      LLM_GATEWAY_URL: http://llm-gateway:3004
+      LOG_LEVEL: debug
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/ai-services/chatbot:/app
+      - /app/node_modules
+    ports:
+      - "3006:3006"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-orchestrator:
+        condition: service_started
+      llm-gateway:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatbot.rule=Host(`api.localhost`) && PathPrefix(`/api/ai/chatbot`)"
+      - "traefik.http.routers.chatbot.service=chatbot"
+      - "traefik.http.services.chatbot.loadbalancer.server.port=3006"
+
+  predictive-analytics:
+    build:
+      context: ./microservices/ai-services/predictive-analytics
+      dockerfile: Dockerfile
+    container_name: mcp-predictive-analytics
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: predictive-analytics-secret-key-dev
+      CORS_ORIGIN: http://localhost:3000,http://localhost:5173
+      MCP_ORCHESTRATOR_URL: http://mcp-orchestrator:3008
+      LLM_GATEWAY_URL: http://llm-gateway:3004
+      LOG_LEVEL: debug
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./microservices/ai-services/predictive-analytics:/app
+      - /app/node_modules
+    ports:
+      - "3007:3007"
+    networks:
+      - mcp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-orchestrator:
+        condition: service_started
+      llm-gateway:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.predictive-analytics.rule=Host(`api.localhost`) && PathPrefix(`/api/ai/analytics`)"
+      - "traefik.http.routers.predictive-analytics.service=predictive-analytics"
+      - "traefik.http.services.predictive-analytics.loadbalancer.server.port=3007"
+
+  # ===== MONITORING =====
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mcp-prometheus
+    ports:
+      - "9090:9090"
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - mcp-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mcp-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: false
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - mcp-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # ===== EMAIL TESTING =====
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mcp-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - mcp-network
+    restart: unless-stopped
+
+  # ===== LOGGING =====
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: mcp-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - mcp-network
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: mcp-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - mcp-network
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+# ===== VOLUMES =====
+
+  # Personalization Engine
+  personalization-engine:
+    build:
+      context: ./microservices/ai-services/personalization-engine
+      dockerfile: Dockerfile
+    container_name: personalization-engine
+    environment:
+      - NODE_ENV=development
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.personalization-engine.rule=Host(personalization-engine.localhost)"
+      - "traefik.http.services.personalization-engine.loadbalancer.server.port=3012"
+
+  # ML Pipeline Service
+  ml-pipeline:
+    build:
+      context: ./microservices/ai-services/ml-pipeline
+      dockerfile: Dockerfile
+    container_name: ml-pipeline
+    environment:
+      - NODE_ENV=development
+      - PORT=3013
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/eduai_platform
+      - REDIS_URL=redis://:redis123@redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - mcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml-pipeline.rule=Host(ml-pipeline.localhost)"
+      - "traefik.http.services.ml-pipeline.loadbalancer.server.port=3013"
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
+# ===== NETWORKS =====
+networks:
+  mcp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
