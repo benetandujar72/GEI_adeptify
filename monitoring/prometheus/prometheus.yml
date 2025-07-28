@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  - job_name: 'eduai-microservices'
+    static_configs:
+      - targets: 
+        - 'user-service:3001'
+        - 'student-service:3002'
+        - 'course-service:3003'
+        - 'resource-service:3009'
+        - 'communication-service:3010'
+        - 'analytics-service:3011'
+        - 'llm-gateway:3006'
+        - 'content-generation:3007'
+        - 'chatbot:3008'
+        - 'predictive-analytics:3008'
+        - 'personalization-engine:3012'
+        - 'ml-pipeline:3013'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'eduai-infrastructure'
+    static_configs:
+      - targets:
+        - 'postgres:5432'
+        - 'redis:6379'
+        - 'traefik:8080'
+    scrape_interval: 30s

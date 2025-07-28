@@ -1,131 +1,250 @@
-import { MCPClient } from '@modelcontextprotocol/sdk/client/index.js';
-import { Context } from './context-manager';
+import { createClient } from 'redis';
+import winston from 'winston';
 
-export interface AIRequest {
+// Configurar logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+});
+
+// Configurar Redis
+const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+// Interfaces para el AI Coordinator
+interface AIRequest {
+  id: string;
+  type: 'llm' | 'content' | 'analytics' | 'personalization' | 'ml';
+  service: string;
   action: string;
-  data: any;
-  context: Context;
+  data: Record<string, any>;
   priority: 'low' | 'medium' | 'high';
-  timeout?: number;
+  userId?: string;
+  sessionId?: string;
 }
 
-export interface AIResponse {
+interface AIResponse {
+  id: string;
+  requestId: string;
   success: boolean;
-  data: any;
-  metadata: {
-    processingTime: number;
-    tokensUsed: number;
-    model: string;
-  };
+  data?: any;
+  error?: string;
+  processingTime: number;
+  timestamp: Date;
 }
 
-export class AIAgentCoordinator {
-  private llmGateway: any;
-  private cache: Map<string, any> = new Map();
-  private readonly CACHE_TTL = 300000; // 5 minutes
+interface AIServiceConfig {
+  name: string;
+  url: string;
+  health: boolean;
+  load: number;
+  lastCheck: Date;
+}
+
+class AICoordinator {
+  private services: Map<string, AIServiceConfig> = new Map();
+  private requestQueue: AIRequest[] = [];
+  private isProcessing = false;
 
   constructor() {
-    this.initializeLLMGateway();
+    this.initializeServices();
+    this.startHealthChecks();
   }
 
-  private async initializeLLMGateway() {
-    // Initialize connection to LLM Gateway service
-    this.llmGateway = {
-      async generateResponse(prompt: string, context: Context): Promise<any> {
-        // Implementation will connect to LLM Gateway service
-        return { response: 'AI response', tokens: 100 };
+  private initializeServices() {
+    this.services.set('llm-gateway', {
+      name: 'LLM Gateway',
+      url: 'http://llm-gateway:3006',
+      health: false,
+      load: 0,
+      lastCheck: new Date()
+    });
+
+    this.services.set('content-generation', {
+      name: 'Content Generation',
+      url: 'http://content-generation:3007',
+      health: false,
+      load: 0,
+      lastCheck: new Date()
+    });
+
+    this.services.set('predictive-analytics', {
+      name: 'Predictive Analytics',
+      url: 'http://predictive-analytics:3008',
+      health: false,
+      load: 0,
+      lastCheck: new Date()
+    });
+
+    this.services.set('personalization-engine', {
+      name: 'Personalization Engine',
+      url: 'http://personalization-engine:3012',
+      health: false,
+      load: 0,
+      lastCheck: new Date()
+    });
+
+    this.services.set('ml-pipeline', {
+      name: 'ML Pipeline',
+      url: 'http://ml-pipeline:3013',
+      health: false,
+      load: 0,
+      lastCheck: new Date()
+    });
+  }
+
+  async submitRequest(request: AIRequest): Promise<string> {
+    request.id = this.generateRequestId();
+    this.requestQueue.push(request);
+    
+    logger.info(Submitted AI request: , type: , service: );
+    
+    // Procesar cola si no está procesando
+    if (!this.isProcessing) {
+      this.processQueue();
+    }
+    
+    return request.id;
+  }
+
+  async getRequestStatus(requestId: string): Promise<AIResponse | null> {
+    const responseData = await redisClient.get(i:response:);
+    return responseData ? JSON.parse(responseData) : null;
+  }
+
+  private async processQueue() {
+    if (this.isProcessing || this.requestQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
+
+    while (this.requestQueue.length > 0) {
+      const request = this.requestQueue.shift();
+      if (!request) continue;
+
+      try {
+        const startTime = Date.now();
+        const response = await this.processRequest(request);
+        const processingTime = Date.now() - startTime;
+
+        const aiResponse: AIResponse = {
+          id: this.generateRequestId(),
+          requestId: request.id,
+          success: true,
+          data: response,
+          processingTime,
+          timestamp: new Date()
+        };
+
+        // Guardar respuesta en Redis
+        await redisClient.setEx(
+          i:response:,
+          3600, // 1 hora TTL
+          JSON.stringify(aiResponse)
+        );
+
+        logger.info(Processed AI request: , time: ms);
+
+      } catch (error) {
+        logger.error(Failed to process AI request: , error);
+        
+        const aiResponse: AIResponse = {
+          id: this.generateRequestId(),
+          requestId: request.id,
+          success: false,
+          error: error.message,
+          processingTime: 0,
+          timestamp: new Date()
+        };
+
+        await redisClient.setEx(
+          i:response:,
+          3600,
+          JSON.stringify(aiResponse)
+        );
       }
+    }
+
+    this.isProcessing = false;
+  }
+
+  private async processRequest(request: AIRequest): Promise<any> {
+    const service = this.services.get(request.service);
+    if (!service || !service.health) {
+      throw new Error(Service  is not available);
+    }
+
+    const response = await fetch(${service.url}/ai/, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': Bearer 
+      },
+      body: JSON.stringify(request.data)
+    });
+
+    if (!response.ok) {
+      throw new Error(AI service error: );
+    }
+
+    return await response.json();
+  }
+
+  private async startHealthChecks() {
+    setInterval(async () => {
+      for (const [serviceName, service] of this.services) {
+        try {
+          const response = await fetch(${service.url}/health, {
+            method: 'GET',
+            timeout: 5000
+          });
+
+          service.health = response.ok;
+          service.lastCheck = new Date();
+          
+          if (response.ok) {
+            const healthData = await response.json();
+            service.load = healthData.load || 0;
+          }
+
+        } catch (error) {
+          service.health = false;
+          service.lastCheck = new Date();
+          logger.warn(Health check failed for :, error.message);
+        }
+      }
+    }, 30000); // Cada 30 segundos
+  }
+
+  private generateRequestId(): string {
+    return i__;
+  }
+
+  async getServiceStatus(): Promise<Record<string, AIServiceConfig>> {
+    const status: Record<string, AIServiceConfig> = {};
+    for (const [name, config] of this.services) {
+      status[name] = { ...config };
+    }
+    return status;
+  }
+
+  async getQueueStatus(): Promise<Record<string, any>> {
+    return {
+      queueLength: this.requestQueue.length,
+      isProcessing: this.isProcessing,
+      timestamp: new Date().toISOString()
     };
   }
-
-  async executeRequest(
-    client: MCPClient,
-    action: string,
-    data: any,
-    context: Context
-  ): Promise<AIResponse> {
-    const startTime = Date.now();
-    const cacheKey = ${action}::;
-
-    // Check cache first
-    const cached = this.cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return {
-        success: true,
-        data: cached.data,
-        metadata: {
-          processingTime: Date.now() - startTime,
-          tokensUsed: 0,
-          model: 'cache'
-        }
-      };
-    }
-
-    try {
-      // Execute the MCP request
-      const result = await client.callTool({
-        name: action,
-        arguments: data
-      });
-
-      // Enhance with AI if needed
-      const enhancedResult = await this.enhanceWithAI(result, context);
-
-      // Cache the result
-      this.cache.set(cacheKey, {
-        data: enhancedResult,
-        timestamp: Date.now()
-      });
-
-      return {
-        success: true,
-        data: enhancedResult,
-        metadata: {
-          processingTime: Date.now() - startTime,
-          tokensUsed: result.metadata?.tokens || 0,
-          model: result.metadata?.model || 'unknown'
-        }
-      };
-    } catch (error) {
-      console.error('AI Coordinator Error:', error);
-      return {
-        success: false,
-        data: null,
-        metadata: {
-          processingTime: Date.now() - startTime,
-          tokensUsed: 0,
-          model: 'error'
-        }
-      };
-    }
-  }
-
-  private async enhanceWithAI(result: any, context: Context): Promise<any> {
-    // Enhance results with AI insights
-    if (result.data && context.data?.preferences?.aiEnhancement) {
-      const prompt = Enhance this data with AI insights: ;
-      const aiResponse = await this.llmGateway.generateResponse(prompt, context);
-      
-      return {
-        ...result.data,
-        aiInsights: aiResponse.response,
-        enhanced: true
-      };
-    }
-
-    return result.data;
-  }
-
-  async optimizeRequest(request: AIRequest): Promise<AIRequest> {
-    // Optimize request based on context and history
-    const optimized = { ...request };
-
-    // Add context-aware optimizations
-    if (request.context.data?.preferences?.optimization) {
-      optimized.timeout = Math.min(request.timeout || 30000, 15000);
-      optimized.priority = 'high';
-    }
-
-    return optimized;
-  }
 }
+
+export default new AICoordinator();

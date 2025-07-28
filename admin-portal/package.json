@@ -1,0 +1,31 @@
+{
+  "name": "eduai-admin-portal",
+  "version": "1.0.0",
+  "description": "EduAI Admin Portal",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.1",
+    "@tanstack/react-query": "^4.29.5",
+    "axios": "^1.3.4",
+    "tailwindcss": "^3.2.7",
+    "@headlessui/react": "^1.7.13",
+    "@heroicons/react": "^2.0.16",
+    "recharts": "^2.5.0",
+    "date-fns": "^2.29.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "@vitejs/plugin-react": "^3.1.0",
+    "typescript": "^4.9.3",
+    "vite": "^4.1.0",
+    "vitest": "^0.29.2"
+  }
+}

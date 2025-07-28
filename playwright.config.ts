@@ -10,10 +10,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
   },
-
   projects: [
     {
       name: 'chromium',
@@ -36,11 +33,9 @@ export default defineConfig({
       use: { ...devices['iPhone 12'] },
     },
   ],
-
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
   },
-}); 
+});
