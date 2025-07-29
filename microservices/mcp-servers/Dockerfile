@@ -1,4 +1,4 @@
-# Multi-stage build for production optimization
+# Multi-stage build for optimized image size
 FROM node:18-alpine AS builder
 
 # Set working directory
@@ -12,7 +12,7 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy source code
 COPY tsconfig.json ./
-COPY src/ ./src/
+COPY src ./src
 
 # Build the application
 RUN npm run build
@@ -32,22 +32,23 @@ COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 
-# Create logs directory
-RUN mkdir -p logs && chown nodejs:nodejs logs
+# Create necessary directories
+RUN mkdir -p logs data/files data/repositories backups && \
+    chown -R nodejs:nodejs logs data backups
 
 # Switch to non-root user
 USER nodejs
 
 # Expose port
-EXPOSE 3009
+EXPOSE 3010
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3009
+ENV PORT=3010
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3009/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:3010/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
-CMD ["node", "dist/index.js"] 
+CMD ["node", "dist/index.js"]

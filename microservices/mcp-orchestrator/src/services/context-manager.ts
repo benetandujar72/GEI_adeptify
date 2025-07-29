@@ -1,130 +1,408 @@
-import { createClient } from 'redis';
-import winston from 'winston';
+import { v4 as uuidv4 } from 'uuid';
+import { Context, ContextType, ContextData } from '../types/mcp';
+import { logContext, logError } from '../utils/logger';
 
-// Configurar logger
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
-});
+export class ContextManager {
+  private contexts: Map<string, Context> = new Map();
+  private userContexts: Map<string, string[]> = new Map(); // userId -> contextIds
+  private sessionContexts: Map<string, string[]> = new Map(); // sessionId -> contextIds
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private readonly maxAge: number = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly cleanupIntervalMs: number = 60 * 60 * 1000; // 1 hour
 
-// Configurar Redis
-const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
+  constructor() {
+    this.startCleanupInterval();
+  }
 
-// Interfaces para el Context Manager
-interface Context {
-  id: string;
-  userId: string;
-  sessionId: string;
-  data: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
-  ttl: number;
-}
-
-interface ContextRequest {
-  userId: string;
-  sessionId: string;
-  key: string;
-  value?: any;
-}
-
-class ContextManager {
-  private readonly DEFAULT_TTL = 3600; // 1 hora
-
-  async createContext(userId: string, sessionId: string): Promise<Context> {
-    const contextId = context::;
+  // Create Context
+  async createContext(
+    type: ContextType,
+    data: ContextData,
+    userId?: string,
+    sessionId?: string,
+    expiresAt?: Date
+  ): Promise<Context> {
+    const contextId = uuidv4();
+    const now = new Date();
+    
     const context: Context = {
       id: contextId,
+      type,
       userId,
       sessionId,
-      data: {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      ttl: this.DEFAULT_TTL
+      data,
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: expiresAt || new Date(now.getTime() + this.maxAge)
     };
 
-    await redisClient.setEx(contextId, this.DEFAULT_TTL, JSON.stringify(context));
-    logger.info(Created context for user: , session: );
-    
+    this.contexts.set(contextId, context);
+
+    // Track by user
+    if (userId) {
+      if (!this.userContexts.has(userId)) {
+        this.userContexts.set(userId, []);
+      }
+      this.userContexts.get(userId)!.push(contextId);
+    }
+
+    // Track by session
+    if (sessionId) {
+      if (!this.sessionContexts.has(sessionId)) {
+        this.sessionContexts.set(sessionId, []);
+      }
+      this.sessionContexts.get(sessionId)!.push(contextId);
+    }
+
+    logContext('create', contextId, { type, userId, sessionId, dataSize: Object.keys(data).length });
+
     return context;
   }
 
-  async getContext(userId: string, sessionId: string): Promise<Context | null> {
-    const contextId = context::;
-    const contextData = await redisClient.get(contextId);
+  // Get Context
+  async getContext(contextId: string): Promise<Context | null> {
+    const context = this.contexts.get(contextId);
     
-    if (!contextData) {
+    if (!context) {
       return null;
     }
 
-    const context: Context = JSON.parse(contextData);
+    // Check if expired
+    if (context.expiresAt && context.expiresAt < new Date()) {
+      await this.deleteContext(contextId);
+      return null;
+    }
+
+    // Update last access
+    context.updatedAt = new Date();
+    this.contexts.set(contextId, context);
+
+    logContext('get', contextId, { type: context.type, userId: context.userId });
+
     return context;
   }
 
-  async updateContext(userId: string, sessionId: string, data: Record<string, any>): Promise<Context> {
-    const context = await this.getContext(userId, sessionId);
+  // Update Context
+  async updateContext(contextId: string, updates: Partial<ContextData>): Promise<Context | null> {
+    const context = await this.getContext(contextId);
     
     if (!context) {
-      return this.createContext(userId, sessionId);
+      return null;
     }
 
-    context.data = { ...context.data, ...data };
+    // Merge updates
+    context.data = { ...context.data, ...updates };
     context.updatedAt = new Date();
 
-    const contextId = context::;
-    await redisClient.setEx(contextId, this.DEFAULT_TTL, JSON.stringify(context));
-    
-    logger.info(Updated context for user: , session: );
+    this.contexts.set(contextId, context);
+
+    logContext('update', contextId, { 
+      type: context.type, 
+      userId: context.userId, 
+      updates: Object.keys(updates) 
+    });
+
     return context;
   }
 
-  async deleteContext(userId: string, sessionId: string): Promise<boolean> {
-    const contextId = context::;
-    const result = await redisClient.del(contextId);
-    
-    logger.info(Deleted context for user: , session: );
-    return result > 0;
-  }
-
-  async getContextValue(userId: string, sessionId: string, key: string): Promise<any> {
-    const context = await this.getContext(userId, sessionId);
-    return context?.data[key] || null;
-  }
-
-  async setContextValue(userId: string, sessionId: string, key: string, value: any): Promise<void> {
-    const context = await this.getContext(userId, sessionId);
+  // Delete Context
+  async deleteContext(contextId: string): Promise<boolean> {
+    const context = this.contexts.get(contextId);
     
     if (!context) {
-      await this.createContext(userId, sessionId);
+      return false;
     }
 
-    await this.updateContext(userId, sessionId, { [key]: value });
+    // Remove from tracking maps
+    if (context.userId) {
+      const userContexts = this.userContexts.get(context.userId);
+      if (userContexts) {
+        const index = userContexts.indexOf(contextId);
+        if (index > -1) {
+          userContexts.splice(index, 1);
+        }
+      }
+    }
+
+    if (context.sessionId) {
+      const sessionContexts = this.sessionContexts.get(context.sessionId);
+      if (sessionContexts) {
+        const index = sessionContexts.indexOf(contextId);
+        if (index > -1) {
+          sessionContexts.splice(index, 1);
+        }
+      }
+    }
+
+    this.contexts.delete(contextId);
+
+    logContext('delete', contextId, { type: context.type, userId: context.userId });
+
+    return true;
   }
 
-  async clearContext(userId: string, sessionId: string): Promise<void> {
-    await this.deleteContext(userId, sessionId);
+  // Get Contexts by User
+  async getContextsByUser(userId: string, type?: ContextType): Promise<Context[]> {
+    const contextIds = this.userContexts.get(userId) || [];
+    const contexts: Context[] = [];
+
+    for (const contextId of contextIds) {
+      const context = await this.getContext(contextId);
+      if (context && (!type || context.type === type)) {
+        contexts.push(context);
+      }
+    }
+
+    return contexts;
   }
 
-  async getContextStats(): Promise<Record<string, any>> {
-    const keys = await redisClient.keys('context:*');
-    const stats = {
-      totalContexts: keys.length,
-      activeUsers: new Set(keys.map(key => key.split(':')[1])).size,
-      timestamp: new Date().toISOString()
+  // Get Contexts by Session
+  async getContextsBySession(sessionId: string, type?: ContextType): Promise<Context[]> {
+    const contextIds = this.sessionContexts.get(sessionId) || [];
+    const contexts: Context[] = [];
+
+    for (const contextId of contextIds) {
+      const context = await this.getContext(contextId);
+      if (context && (!type || context.type === type)) {
+        contexts.push(context);
+      }
+    }
+
+    return contexts;
+  }
+
+  // Search Contexts
+  async searchContexts(criteria: {
+    type?: ContextType;
+    userId?: string;
+    sessionId?: string;
+    dataKeys?: string[];
+    createdAfter?: Date;
+    createdBefore?: Date;
+  }): Promise<Context[]> {
+    const contexts: Context[] = [];
+
+    for (const context of this.contexts.values()) {
+      // Check if expired
+      if (context.expiresAt && context.expiresAt < new Date()) {
+        continue;
+      }
+
+      // Apply filters
+      if (criteria.type && context.type !== criteria.type) {
+        continue;
+      }
+
+      if (criteria.userId && context.userId !== criteria.userId) {
+        continue;
+      }
+
+      if (criteria.sessionId && context.sessionId !== criteria.sessionId) {
+        continue;
+      }
+
+      if (criteria.dataKeys) {
+        const hasAllKeys = criteria.dataKeys.every(key => key in context.data);
+        if (!hasAllKeys) {
+          continue;
+        }
+      }
+
+      if (criteria.createdAfter && context.createdAt < criteria.createdAfter) {
+        continue;
+      }
+
+      if (criteria.createdBefore && context.createdAt > criteria.createdBefore) {
+        continue;
+      }
+
+      contexts.push(context);
+    }
+
+    return contexts;
+  }
+
+  // Merge Contexts
+  async mergeContexts(contextIds: string[], targetContextId?: string): Promise<Context | null> {
+    if (contextIds.length === 0) {
+      return null;
+    }
+
+    const contexts: Context[] = [];
+    for (const contextId of contextIds) {
+      const context = await this.getContext(contextId);
+      if (context) {
+        contexts.push(context);
+      }
+    }
+
+    if (contexts.length === 0) {
+      return null;
+    }
+
+    // Use the first context as base
+    const baseContext = contexts[0];
+    const mergedData: ContextData = { ...baseContext.data };
+
+    // Merge data from other contexts
+    for (let i = 1; i < contexts.length; i++) {
+      const context = contexts[i];
+      Object.assign(mergedData, context.data);
+    }
+
+    // Create new merged context or update target
+    if (targetContextId) {
+      return await this.updateContext(targetContextId, mergedData);
+    } else {
+      return await this.createContext(
+        baseContext.type,
+        mergedData,
+        baseContext.userId,
+        baseContext.sessionId
+      );
+    }
+  }
+
+  // Get Context Summary
+  async getContextSummary(): Promise<{
+    total: number;
+    byType: Record<ContextType, number>;
+    active: number;
+    expired: number;
+    byUser: number;
+    bySession: number;
+  }> {
+    const now = new Date();
+    let active = 0;
+    let expired = 0;
+    const byType: Record<ContextType, number> = {
+      [ContextType.USER_SESSION]: 0,
+      [ContextType.LEARNING_SESSION]: 0,
+      [ContextType.AI_INTERACTION]: 0,
+      [ContextType.SYSTEM_OPERATION]: 0
     };
 
-    return stats;
+    for (const context of this.contexts.values()) {
+      byType[context.type]++;
+
+      if (context.expiresAt && context.expiresAt < now) {
+        expired++;
+      } else {
+        active++;
+      }
+    }
+
+    return {
+      total: this.contexts.size,
+      byType,
+      active,
+      expired,
+      byUser: this.userContexts.size,
+      bySession: this.sessionContexts.size
+    };
+  }
+
+  // Cleanup Expired Contexts
+  async cleanupExpiredContexts(): Promise<number> {
+    const now = new Date();
+    const expiredContextIds: string[] = [];
+
+    for (const [contextId, context] of this.contexts.entries()) {
+      if (context.expiresAt && context.expiresAt < now) {
+        expiredContextIds.push(contextId);
+      }
+    }
+
+    let cleanedCount = 0;
+    for (const contextId of expiredContextIds) {
+      const deleted = await this.deleteContext(contextId);
+      if (deleted) {
+        cleanedCount++;
+      }
+    }
+
+    logContext('cleanup', 'system', { cleanedCount, remaining: this.contexts.size });
+
+    return cleanedCount;
+  }
+
+  // Start Cleanup Interval
+  private startCleanupInterval(): void {
+    this.cleanupInterval = setInterval(async () => {
+      try {
+        await this.cleanupExpiredContexts();
+      } catch (error) {
+        logError(error as Error, { operation: 'cleanup_expired_contexts' });
+      }
+    }, this.cleanupIntervalMs);
+  }
+
+  // Stop Cleanup Interval
+  stopCleanupInterval(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+  }
+
+  // Get All Contexts (for debugging)
+  async getAllContexts(): Promise<Context[]> {
+    return Array.from(this.contexts.values());
+  }
+
+  // Clear All Contexts (for testing)
+  async clearAllContexts(): Promise<void> {
+    this.contexts.clear();
+    this.userContexts.clear();
+    this.sessionContexts.clear();
+  }
+
+  // Get Context Statistics
+  async getContextStatistics(): Promise<{
+    totalContexts: number;
+    contextsByType: Record<ContextType, number>;
+    contextsByUser: number;
+    contextsBySession: number;
+    averageContextSize: number;
+    oldestContext: Date | null;
+    newestContext: Date | null;
+  }> {
+    const contexts = Array.from(this.contexts.values());
+    const byType: Record<ContextType, number> = {
+      [ContextType.USER_SESSION]: 0,
+      [ContextType.LEARNING_SESSION]: 0,
+      [ContextType.AI_INTERACTION]: 0,
+      [ContextType.SYSTEM_OPERATION]: 0
+    };
+
+    let totalSize = 0;
+    let oldestDate: Date | null = null;
+    let newestDate: Date | null = null;
+
+    for (const context of contexts) {
+      byType[context.type]++;
+      totalSize += JSON.stringify(context.data).length;
+
+      if (!oldestDate || context.createdAt < oldestDate) {
+        oldestDate = context.createdAt;
+      }
+
+      if (!newestDate || context.createdAt > newestDate) {
+        newestDate = context.createdAt;
+      }
+    }
+
+    return {
+      totalContexts: contexts.length,
+      contextsByType: byType,
+      contextsByUser: this.userContexts.size,
+      contextsBySession: this.sessionContexts.size,
+      averageContextSize: contexts.length > 0 ? totalSize / contexts.length : 0,
+      oldestContext: oldestDate,
+      newestContext: newestDate
+    };
   }
 }
 
-export default new ContextManager();
+// Export singleton instance
+export const contextManager = new ContextManager();

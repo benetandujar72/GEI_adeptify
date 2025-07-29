@@ -1,8 +1,24 @@
 # MCP Orchestrator Service
 
-## 🎯 Descripción
+El **MCP Orchestrator** es el componente central de orquestación y enrutamiento para la plataforma EduAI. Proporciona una capa de abstracción inteligente que coordina todos los servicios de IA y microservicios de la plataforma.
 
-El **MCP Orchestrator Service** es el componente central de orquestación y enrutamiento para la plataforma EduAI. Actúa como el cerebro del sistema, coordinando la comunicación entre microservicios, gestionando contextos, coordinando agentes AI y ejecutando workflows complejos.
+## 🚀 Características
+
+### Core Features
+- **Service Discovery & Registration**: Registro y descubrimiento automático de servicios
+- **Intelligent Routing**: Enrutamiento inteligente con múltiples estrategias
+- **Load Balancing**: Balanceo de carga con circuit breakers
+- **Context Management**: Gestión de contexto para sesiones de usuario
+- **Agent Coordination**: Coordinación de agentes de IA
+- **Workflow Engine**: Motor de flujos de trabajo complejos
+
+### Advanced Features
+- **Circuit Breaker Pattern**: Protección contra fallos en cascada
+- **Health Monitoring**: Monitoreo de salud de servicios
+- **Metrics Collection**: Métricas Prometheus para observabilidad
+- **Real-time Logging**: Logging en tiempo real con Winston
+- **Security**: Autenticación JWT y autorización basada en roles
+- **Rate Limiting**: Limitación de tasa por IP y endpoint
 
 ## 🏗️ Arquitectura
 
@@ -10,541 +26,411 @@ El **MCP Orchestrator Service** es el componente central de orquestación y enru
 ┌─────────────────────────────────────────────────────────────┐
 │                    MCP Orchestrator                        │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │   Router    │  │   Context   │  │    Agent    │        │
-│  │  Manager    │  │  Manager    │  │ Coordinator │        │
-│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │   Router    │  │   Context   │  │   Agent Coordinator │ │
+│  │   Service   │  │   Manager   │  │                     │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │  Workflow   │  │ Monitoring  │  │   Alerts    │        │
-│  │  Engine     │  │   System    │  │   System    │        │
-│  └─────────────┘  └─────────────┘  └─────────────┘        │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │   Redis     │  │   Metrics   │  │   Logging   │        │
-│  │   Cache     │  │  Service    │  │  Service    │        │
-│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │   Load      │  │   Circuit   │  │   Workflow Engine   │ │
+│  │  Balancer   │  │   Breaker   │  │                     │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
+                              │
+         ┌────────────────────┼────────────────────┐
+         │                    │                    │
+    ┌────▼────┐        ┌──────▼──────┐      ┌─────▼────┐
+    │Services │        │   Context   │      │  Agents  │
+    │Registry │        │   Storage   │      │  Pool    │
+    └─────────┘        └─────────────┘      └──────────┘
 ```
 
-## ✨ Características Principales
+## 📋 Prerrequisitos
 
-### 🔄 **Orquestación MCP**
-- Enrutamiento inteligente de requests MCP
-- Gestión de servicios registrados
-- Balanceo de carga y failover
-- Circuit breaker patterns
+- **Node.js**: v18.0.0 o superior
+- **npm**: v8.0.0 o superior
+- **Redis**: v6.0.0 o superior (opcional, para persistencia)
+- **PostgreSQL**: v13.0.0 o superior (opcional, para métricas avanzadas)
 
-### 🧠 **Gestión de Contextos**
-- Creación y gestión de contextos de sesión
-- Persistencia de estado entre requests
-- Búsqueda y filtrado avanzado
-- Gestión de metadatos
+## 🛠️ Instalación
 
-### 🤖 **Coordinación de Agentes AI**
-- Registro y gestión de agentes AI
-- Distribución de tareas
-- Monitoreo de rendimiento
-- Coordinación multi-agente
-
-### 🔄 **Motor de Workflows**
-- Definición de workflows complejos
-- Ejecución secuencial y paralela
-- Gestión de dependencias
-- Rollback automático
-
-### 📊 **Sistema de Monitoreo y Logging**
-- Logging estructurado con Winston
-- Métricas Prometheus completas
-- Sistema de alertas automatizado
-- Dashboards de monitoreo
-
-## 🚀 Inicio Rápido
-
-### Prerrequisitos
-
-- Node.js 18+
-- Redis 6+
-- PostgreSQL 13+ (opcional)
-- Elasticsearch 7+ (opcional)
-
-### Instalación
-
+### 1. Clonar el repositorio
 ```bash
-# Clonar el repositorio
 git clone https://github.com/adeptify/eduai-platform.git
-cd microservices/mcp-orchestrator
+cd eduai-platform/microservices/mcp-orchestrator
+```
 
-# Instalar dependencias
+### 2. Instalar dependencias
+```bash
 npm install
+```
 
-# Configurar variables de entorno
-cp .env.example .env
+### 3. Configurar variables de entorno
+```bash
+cp env.example .env
 # Editar .env con tus configuraciones
+```
 
-# Construir el proyecto
+### 4. Compilar TypeScript
+```bash
 npm run build
+```
 
-# Iniciar en desarrollo
+### 5. Iniciar el servicio
+```bash
+# Desarrollo
 npm run dev
 
-# Iniciar en producción
+# Producción
 npm start
 ```
 
-### Variables de Entorno
+## 🐳 Docker
 
-```env
-# Configuración del servidor
-PORT=3008
-NODE_ENV=development
+### Construir imagen
+```bash
+docker build -t mcp-orchestrator .
+```
 
-# Redis
-REDIS_URL=redis://localhost:6379
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# Logging
-LOG_LEVEL=info
-ELASTICSEARCH_URL=http://localhost:9200
-ELASTICSEARCH_USERNAME=elastic
-ELASTICSEARCH_PASSWORD=
-
-# Alertas
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-ALERT_EMAIL_FROM=alerts@adeptify.es
-ALERT_EMAIL_TO=admin@adeptify.es
-
-SLACK_WEBHOOK_URL=
-SLACK_CHANNEL=#alerts
-SLACK_USERNAME=MCP Orchestrator Alerts
-
-# CORS
-CORS_ORIGIN=*
+### Ejecutar contenedor
+```bash
+docker run -d \
+  --name mcp-orchestrator \
+  -p 3009:3009 \
+  -e NODE_ENV=production \
+  -e REDIS_URL=redis://redis:6379 \
+  mcp-orchestrator
 ```
 
 ## 📡 API Endpoints
 
-### 🔄 **Router Endpoints**
-
+### Health Check
 ```http
-POST /api/orchestrator/route
-GET  /api/orchestrator/services
-GET  /api/orchestrator/services/:serviceId
-GET  /api/orchestrator/metrics
+GET /health
 ```
 
-### 🧠 **Context Manager Endpoints**
-
+### Metrics (Prometheus)
 ```http
-POST   /api/orchestrator/contexts
-GET    /api/orchestrator/contexts/:contextId
-PUT    /api/orchestrator/contexts/:contextId
-DELETE /api/orchestrator/contexts/:contextId
-POST   /api/orchestrator/contexts/search
-GET    /api/orchestrator/contexts/user/:userId
-GET    /api/orchestrator/contexts/session/:sessionId
-GET    /api/orchestrator/contexts/metrics
+GET /metrics
 ```
 
-### 🤖 **AI Agent Coordinator Endpoints**
-
+### Main Routing
 ```http
-POST   /api/orchestrator/agents
-GET    /api/orchestrator/agents
-GET    /api/orchestrator/agents/:agentId
-GET    /api/orchestrator/agents/type/:type
-POST   /api/orchestrator/tasks
-GET    /api/orchestrator/tasks
-GET    /api/orchestrator/tasks/:taskId
-POST   /api/orchestrator/workflows
-GET    /api/orchestrator/workflows
-GET    /api/orchestrator/workflows/:workflowId
-POST   /api/orchestrator/workflows/:workflowId/execute
-GET    /api/orchestrator/agents/metrics
+POST /api/mcp/route
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "service": "user-service",
+  "action": "get_user",
+  "data": { "userId": "123" },
+  "context": "context-id",
+  "priority": 5
+}
 ```
 
-### 📊 **Monitoring Endpoints**
-
+### Service Management
 ```http
-GET  /api/monitoring/health
-GET  /api/monitoring/health/detailed
-GET  /api/monitoring/metrics
-GET  /api/monitoring/metrics/json
-GET  /api/monitoring/system/info
-GET  /api/monitoring/alerts/status
-POST /api/monitoring/alerts/trigger
-GET  /api/monitoring/performance
-GET  /api/monitoring/dependencies
-GET  /api/monitoring/mcp/metrics
-GET  /api/monitoring/mcp/services/status
-POST /api/monitoring/metrics/clear
+# Registrar servicio
+POST /api/mcp/services/register
+{
+  "name": "ai-services",
+  "url": "http://localhost:3008",
+  "port": 3008,
+  "capabilities": ["ai_services"],
+  "version": "1.0.0"
+}
+
+# Obtener servicios
+GET /api/mcp/services
+
+# Obtener estado de servicio
+GET /api/mcp/services/:serviceName
 ```
 
-## 📊 Sistema de Monitoreo
+### Context Management
+```http
+# Crear contexto
+POST /api/mcp/contexts
+{
+  "type": "user_session",
+  "data": { "userId": "123", "preferences": {} },
+  "userId": "123",
+  "sessionId": "session-456"
+}
 
-### 🔍 **Logging Service**
+# Obtener contexto
+GET /api/mcp/contexts/:contextId
 
-El sistema utiliza **Winston** para logging estructurado con múltiples transportes:
-
-- **Consola**: Para desarrollo
-- **Archivos**: Para producción (rotación automática)
-- **Elasticsearch**: Para análisis avanzado
-
-#### Categorías de Logs
-
-```typescript
-// Orquestación
-logger.logOrchestration('service_started', { port: 3008 });
-
-// Routing MCP
-logger.logMCPRouting('user-service', 'create_user', { userId: '123' });
-
-// Gestión de contextos
-logger.logContextManagement('create', 'ctx-123', { contextId: 'ctx-123' });
-
-// Coordinación de agentes
-logger.logAgentCoordination('register', 'agent-123', { agentId: 'agent-123' });
-
-// Workflows
-logger.logWorkflow('started', 'wf-123', { workflowId: 'wf-123' });
-
-// Tareas
-logger.logTask('created', 'task-123', { taskId: 'task-123' });
+# Actualizar contexto
+PUT /api/mcp/contexts/:contextId
+{
+  "updates": { "lastActivity": "2024-01-01T00:00:00Z" }
+}
 ```
 
-### 📈 **Metrics Service**
+### Agent Management
+```http
+# Registrar agente
+POST /api/mcp/agents
+{
+  "name": "ai-agent-1",
+  "type": "ai_coordinator",
+  "capabilities": ["content_generation", "analytics"],
+  "config": { "maxConcurrency": 5 },
+  "maxConcurrency": 5
+}
 
-Métricas Prometheus completas para monitoreo en tiempo real:
+# Obtener agentes
+GET /api/mcp/agents
 
-#### Métricas HTTP
-- `mcp_orchestrator_http_requests_total`
-- `mcp_orchestrator_http_request_duration_seconds`
-- `mcp_orchestrator_http_requests_in_progress`
-- `mcp_orchestrator_http_requests_failed_total`
-
-#### Métricas MCP
-- `mcp_orchestrator_mcp_requests_total`
-- `mcp_orchestrator_mcp_request_duration_seconds`
-- `mcp_orchestrator_mcp_services_registered`
-- `mcp_orchestrator_mcp_services_active`
-
-#### Métricas de Routing
-- `mcp_orchestrator_routing_requests_total`
-- `mcp_orchestrator_routing_cache_hits_total`
-- `mcp_orchestrator_routing_cache_misses_total`
-
-#### Métricas de Context Management
-- `mcp_orchestrator_context_operations_total`
-- `mcp_orchestrator_contexts_active`
-- `mcp_orchestrator_contexts_created_total`
-
-#### Métricas de Agent Coordination
-- `mcp_orchestrator_agent_operations_total`
-- `mcp_orchestrator_agents_active`
-- `mcp_orchestrator_agent_tasks_total`
-
-#### Métricas de Workflows
-- `mcp_orchestrator_workflow_operations_total`
-- `mcp_orchestrator_workflows_active`
-- `mcp_orchestrator_workflow_steps_total`
-
-### 🚨 **Alerts Service**
-
-Sistema de alertas automatizado con múltiples canales:
-
-#### Reglas Predefinidas
-
-```typescript
-// Alertas de MCP
-- mcp-high-error-rate: Tasa de error MCP alta
-- mcp-high-response-time: Tiempo de respuesta MCP alto
-- mcp-services-unhealthy: Servicios MCP no saludables
-
-// Alertas de Routing
-- routing-high-error-rate: Tasa de error de routing alta
-- routing-high-latency: Latencia de routing alta
-
-// Alertas de Context Management
-- context-high-error-rate: Tasa de error de gestión de contextos alta
-- context-high-latency: Latencia de gestión de contextos alta
-
-// Alertas de Agent Coordination
-- agent-high-error-rate: Tasa de error de coordinación de agentes alta
-- agent-task-failures: Fallos de tareas de agentes
-
-// Alertas de Workflows
-- workflow-high-error-rate: Tasa de error de workflows alta
-- workflow-long-duration: Workflows de larga duración
-
-// Alertas de Performance
-- high-memory-usage: Uso de memoria alto
-- high-cpu-usage: Uso de CPU alto
-
-// Alertas de Circuit Breaker
-- circuit-breaker-trips: Activaciones de circuit breaker
-
-// Alertas de AI Services
-- ai-high-error-rate: Tasa de error de servicios AI alta
-- ai-high-cost: Costo de servicios AI alto
+# Heartbeat del agente
+POST /api/mcp/agents/:agentId/heartbeat
 ```
 
-#### Canales de Notificación
+### Task Management
+```http
+# Crear tarea
+POST /api/mcp/tasks
+{
+  "agentType": "ai_coordinator",
+  "taskType": "content_generation",
+  "data": { "prompt": "Generate a lesson about math" },
+  "priority": 5,
+  "contextId": "context-123"
+}
 
-- **Email**: SMTP configurable
-- **Slack**: Webhooks de Slack
-- **Webhook**: Webhooks personalizados
-- **PagerDuty**: Integración con PagerDuty
+# Obtener tareas
+GET /api/mcp/tasks
 
-## 🧪 Testing
+# Completar tarea
+PUT /api/mcp/tasks/:taskId/complete
+{
+  "result": { "content": "Generated lesson content" }
+}
+```
 
-### Ejecutar Tests
+### Workflow Management
+```http
+# Crear workflow
+POST /api/mcp/workflows
+{
+  "name": "lesson_generation",
+  "description": "Generate complete lesson with exercises",
+  "steps": [
+    {
+      "name": "generate_content",
+      "agentType": "ai_coordinator",
+      "action": "content_generation",
+      "data": { "topic": "math" }
+    },
+    {
+      "name": "generate_exercises",
+      "agentType": "ai_coordinator",
+      "action": "exercise_generation",
+      "data": { "content": "{{previous_step.result}}" },
+      "dependencies": ["generate_content"]
+    }
+  ],
+  "triggers": [
+    {
+      "type": "manual",
+      "enabled": true
+    }
+  ],
+  "status": "active"
+}
+
+# Ejecutar workflow
+POST /api/mcp/workflows/:workflowId/execute
+{
+  "contextId": "context-123"
+}
+```
+
+## ⚙️ Configuración
+
+### Variables de Entorno Principales
 
 ```bash
-# Tests unitarios
-npm test
+# Servidor
+PORT=3009
+NODE_ENV=production
+LOG_LEVEL=info
 
-# Tests en modo watch
-npm run test:watch
+# Seguridad
+JWT_SECRET=your-super-secret-jwt-key
+CORS_ORIGIN=https://gei.adeptify.es
 
-# Tests con coverage
-npm run test:coverage
+# Redis
+REDIS_URL=redis://localhost:6379
 
-# Tests específicos
-npm test -- monitoring.test.ts
+# Circuit Breaker
+CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
+CIRCUIT_BREAKER_RECOVERY_TIMEOUT=60000
+
+# Load Balancer
+LOAD_BALANCER_STRATEGY=round_robin
+LOAD_BALANCER_HEALTH_CHECK_INTERVAL=30000
+
+# Context Management
+CONTEXT_MAX_AGE=86400000
+CONTEXT_CLEANUP_INTERVAL=3600000
 ```
 
-### Estructura de Tests
+### Estrategias de Load Balancing
 
-```
-tests/
-├── setup.ts              # Configuración global de tests
-├── monitoring.test.ts    # Tests del sistema de monitoreo
-├── services/            # Tests de servicios
-├── middleware/          # Tests de middleware
-└── routes/              # Tests de rutas
+- **round_robin**: Distribución cíclica
+- **least_connections**: Menor número de conexiones
+- **weighted**: Distribución por peso
+- **intelligent**: Selección inteligente basada en métricas
+
+## 📊 Monitoreo
+
+### Métricas Prometheus
+
+El servicio expone métricas en formato Prometheus en `/metrics`:
+
+- `mcp_http_requests_total`: Total de requests HTTP
+- `mcp_requests_total`: Total de requests MCP
+- `mcp_services_registered`: Servicios registrados
+- `mcp_contexts_active`: Contextos activos
+- `mcp_agents_active`: Agentes activos
+- `mcp_tasks_pending`: Tareas pendientes
+- `mcp_circuit_breaker_state`: Estado del circuit breaker
+
+### Health Checks
+
+```bash
+# Health check básico
+curl http://localhost:3009/health
+
+# Health check detallado
+curl http://localhost:3009/api/mcp/health
 ```
 
-## 📦 Scripts Disponibles
+## 🔧 Desarrollo
+
+### Scripts Disponibles
 
 ```bash
 # Desarrollo
-npm run dev              # Iniciar en modo desarrollo
-npm run build            # Construir para producción
-npm run start            # Iniciar en producción
+npm run dev          # Iniciar en modo desarrollo
+npm run build        # Compilar TypeScript
+npm run test         # Ejecutar tests
+npm run test:watch   # Tests en modo watch
+npm run lint         # Linting
+npm run lint:fix     # Linting con auto-fix
 
-# Testing
-npm test                 # Ejecutar tests
-npm run test:watch       # Tests en modo watch
-npm run test:coverage    # Tests con coverage
-
-# Linting
-npm run lint             # Verificar código
-npm run lint:fix         # Corregir problemas de linting
-
-# Type Checking
-npm run type-check       # Verificar tipos TypeScript
-
-# Monitoreo
-npm run monitoring:health    # Verificar salud del servicio
-npm run monitoring:metrics  # Obtener métricas
-npm run monitoring:alerts   # Verificar estado de alertas
-npm run monitoring:logs     # Ver logs en tiempo real
-npm run monitoring:system   # Información del sistema
-npm run monitoring:dependencies # Estado de dependencias
-
-# Logs
-npm run logs:clear       # Limpiar logs
-npm run logs:archive     # Archivar logs
-
-# Métricas
-npm run metrics:export   # Exportar métricas
-npm run prometheus:test  # Probar métricas Prometheus
-
-# Alertas
-npm run alerts:test      # Probar sistema de alertas
+# Producción
+npm start            # Iniciar en modo producción
+npm run security:audit  # Auditoría de seguridad
 ```
 
-## 🔧 Configuración Avanzada
+### Estructura del Proyecto
 
-### Configuración de Monitoreo
-
-```typescript
-// Configuración de producción
-const productionConfig = {
-  enableRequestLogging: true,
-  enablePerformanceLogging: true,
-  enableAuditLogging: true,
-  enableMetrics: true,
-  slowRequestThreshold: 1000,
-  logRequestBody: false,
-  logResponseBody: false,
-  sanitizeSensitiveData: true
-};
-
-// Configuración de desarrollo
-const developmentConfig = {
-  enableRequestLogging: true,
-  enablePerformanceLogging: true,
-  enableAuditLogging: true,
-  enableMetrics: true,
-  slowRequestThreshold: 500,
-  logRequestBody: true,
-  logResponseBody: true,
-  sanitizeSensitiveData: false
-};
+```
+src/
+├── controllers/     # Controladores de la API
+├── middleware/      # Middlewares (auth, validation, etc.)
+├── routes/          # Definición de rutas
+├── services/        # Lógica de negocio
+├── types/           # Tipos TypeScript
+├── utils/           # Utilidades (logger, etc.)
+└── index.ts         # Punto de entrada
 ```
 
-### Configuración de Redis
+## 🔒 Seguridad
 
-```typescript
-const redisConfig = {
-  url: 'redis://localhost:6379',
-  host: 'localhost',
-  port: 6379,
-  password: '',
-  db: 0,
-  retryDelayOnFailover: 100,
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  lazyConnect: true
-};
+### Autenticación
+
+El servicio utiliza JWT para autenticación:
+
+```bash
+# Obtener token
+curl -X POST http://localhost:3009/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password"}'
+
+# Usar token
+curl -X POST http://localhost:3009/api/mcp/route \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"service": "user-service", "action": "get_user"}'
 ```
 
-## 📚 Integración con ELK Stack
+### Autorización
 
-### Configuración de Elasticsearch
+Roles disponibles:
+- `admin`: Acceso completo
+- `service`: Acceso a servicios
+- `user`: Acceso limitado
 
-```typescript
-// Winston Elasticsearch Transport
-new ElasticsearchTransport({
-  level: 'info',
-  clientOpts: {
-    node: process.env.ELASTICSEARCH_URL,
-    auth: {
-      username: process.env.ELASTICSEARCH_USERNAME,
-      password: process.env.ELASTICSEARCH_PASSWORD
-    }
-  },
-  indexPrefix: 'logs-mcp-orchestrator',
-  ensureMappingTemplate: true
-});
-```
+Permisos:
+- `service:manage`: Gestión de servicios
+- `context:manage`: Gestión de contexto
+- `agent:manage`: Gestión de agentes
+- `workflow:manage`: Gestión de workflows
 
-### Kibana Dashboards
+## 🚨 Troubleshooting
 
-El sistema incluye dashboards predefinidos para Kibana:
+### Problemas Comunes
 
-- **MCP Orchestrator Overview**: Vista general del servicio
-- **Request Performance**: Rendimiento de requests
-- **Error Analysis**: Análisis de errores
-- **Agent Coordination**: Coordinación de agentes
-- **Workflow Monitoring**: Monitoreo de workflows
+1. **Servicio no responde**
+   ```bash
+   # Verificar logs
+   tail -f logs/mcp-orchestrator.log
+   
+   # Verificar health check
+   curl http://localhost:3009/health
+   ```
 
-## 📈 Integración con Prometheus y Grafana
+2. **Error de conexión a Redis**
+   ```bash
+   # Verificar Redis
+   redis-cli ping
+   
+   # Verificar URL en .env
+   REDIS_URL=redis://localhost:6379
+   ```
 
-### Configuración de Prometheus
+3. **Circuit Breaker abierto**
+   ```bash
+   # Verificar métricas
+   curl http://localhost:3009/metrics | grep circuit_breaker
+   
+   # Reset manual (solo desarrollo)
+   curl -X POST http://localhost:3009/api/mcp/services/reset-circuit-breaker
+   ```
 
-```yaml
-# prometheus.yml
-scrape_configs:
-  - job_name: 'mcp-orchestrator'
-    static_configs:
-      - targets: ['localhost:3008']
-    metrics_path: '/api/monitoring/metrics'
-    scrape_interval: 15s
-```
+### Logs
 
-### Dashboards de Grafana
-
-Dashboards predefinidos disponibles:
-
-- **MCP Orchestrator Dashboard**: Métricas principales
-- **Request Performance Dashboard**: Rendimiento de requests
-- **Service Health Dashboard**: Salud de servicios
-- **Agent Coordination Dashboard**: Coordinación de agentes
-- **Workflow Performance Dashboard**: Rendimiento de workflows
-
-## 🚀 Despliegue
-
-### Docker
-
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY dist ./dist
-
-EXPOSE 3008
-
-CMD ["node", "dist/index.js"]
-```
-
-### Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  mcp-orchestrator:
-    build: .
-    ports:
-      - "3008:3008"
-    environment:
-      - NODE_ENV=production
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
-      - elasticsearch
-
-  redis:
-    image: redis:6-alpine
-    ports:
-      - "6379:6379"
-
-  elasticsearch:
-    image: elasticsearch:7.17.0
-    environment:
-      - discovery.type=single-node
-    ports:
-      - "9200:9200"
-```
+Los logs se guardan en:
+- `logs/mcp-orchestrator.log`: Logs generales
+- `logs/mcp-orchestrator-error.log`: Solo errores
+- `logs/orchestrator.log`: Logs de orquestación
+- `logs/routing.log`: Logs de enrutamiento
+- `logs/context.log`: Logs de contexto
+- `logs/agent.log`: Logs de agentes
 
 ## 🤝 Contribución
 
 1. Fork el proyecto
-2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+2. Crear rama feature (`git checkout -b feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir un Pull Request
+5. Abrir Pull Request
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
 
 ## 🆘 Soporte
 
-- **Documentación**: [docs.adeptify.es](https://docs.adeptify.es)
+- **Documentación**: [Wiki del proyecto](https://github.com/adeptify/eduai-platform/wiki)
 - **Issues**: [GitHub Issues](https://github.com/adeptify/eduai-platform/issues)
-- **Discord**: [Adeptify Community](https://discord.gg/adeptify)
-
-## 🔗 Enlaces Relacionados
-
-- [User Service](../user-service/README.md)
-- [Student Service](../student-service/README.md)
-- [Course Service](../course-service/README.md)
-- [AI Services](../ai-services/README.md)
-- [API Gateway](../../api-gateway/README.md)
+- **Email**: support@adeptify.es
 
 ---
 
-**MCP Orchestrator Service** - El cerebro de la plataforma EduAI 🧠
+**MCP Orchestrator** - El corazón inteligente de la plataforma EduAI 🧠

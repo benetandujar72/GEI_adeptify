@@ -1,16 +1,26 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
 import { logger } from './utils/logger';
-import llmRoutes from './routes/llm.routes';
+import { errorHandler } from './middleware/error-handler';
+import { authMiddleware } from './middleware/auth';
+import { metricsMiddleware } from './middleware/metrics';
+import { llmRoutes } from './routes/llm';
+import { healthRoutes } from './routes/health';
+import { metricsRoutes } from './routes/metrics';
+import { cacheService } from './services/cache';
+import { costTrackingService } from './services/cost-tracking';
+
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 3007;
 
-// ===== MIDDLEWARE DE SEGURIDAD =====
-
-// Helmet para headers de seguridad
+// Middleware de seguridad
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -20,192 +30,110 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
     },
   },
-  crossOriginEmbedderPolicy: false,
 }));
 
-// CORS configuration
+// CORS
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'https://gei.adeptify.es'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
-// Rate limiting más permisivo para LLM requests
+// Compresión
+app.use(compression());
+
+// Logging
+app.use(morgan('combined', {
+  stream: {
+    write: (message: string) => logger.info(message.trim())
+  }
+}));
+
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200, // máximo 200 requests por ventana (más permisivo para LLM)
-  message: {
-    success: false,
-    error: 'Too many requests from this IP, please try again later.',
-  },
+  max: 100, // máximo 100 requests por ventana
+  message: 'Demasiadas requests desde esta IP',
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use(limiter);
 
-// ===== MIDDLEWARE DE PARSING =====
-
-// Parse JSON bodies con límite más alto para LLM requests
-app.use(express.json({ limit: '50mb' }));
-
-// Parse URL-encoded bodies
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// ===== MIDDLEWARE DE LOGGING =====
-
-// Request logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  logger.info(`${req.method} ${req.path} - ${req.ip}`);
-  
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    logger.info(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
-  });
-  
-  next();
+// Rate limiting específico para LLM
+const llmLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 10, // máximo 10 requests por minuto
+  message: 'Demasiadas requests a LLM desde esta IP',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// ===== RUTAS =====
+// Parse JSON
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check básico
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    service: 'LLM Gateway',
-    status: 'running',
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    features: [
-      'Multi-provider LLM support (OpenAI, Anthropic, Google)',
-      'Cost tracking and optimization',
-      'Caching and rate limiting',
-      'Batch processing',
-      'Streaming support',
-      'Health monitoring'
-    ]
-  });
-});
+// Middleware de métricas
+app.use(metricsMiddleware);
 
-// API routes
-app.use('/api', llmRoutes);
+// Rutas de salud (sin autenticación)
+app.use('/api/health', healthRoutes);
 
-// ===== MIDDLEWARE DE ERROR HANDLING =====
+// Middleware de autenticación para rutas protegidas
+app.use('/api/llm', authMiddleware, llmLimiter, llmRoutes);
+app.use('/api/metrics', authMiddleware, metricsRoutes);
 
-// 404 handler
-app.use('*', (req, res) => {
-  logger.warn(`Route not found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({
-    success: false,
-    error: 'Route not found',
-    path: req.originalUrl,
-    method: req.method
-  });
-});
+// Middleware de manejo de errores
+app.use(errorHandler);
 
-// Global error handler
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error:', error);
-  
-  // Si es un error de validación de Zod
-  if (error.name === 'ZodError') {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation error',
-      details: error.errors
-    });
-  }
-  
-  // Si es un error de LLM específico
-  if (error.provider && error.model) {
-    return res.status(500).json({
-      success: false,
-      error: 'LLM provider error',
-      provider: error.provider,
-      model: error.model,
-      details: error.error
-    });
-  }
-  
-  // Si es un error de rate limiting
-  if (error.code === 'RATE_LIMIT_EXCEEDED') {
-    return res.status(429).json({
-      success: false,
-      error: 'Rate limit exceeded',
-      retryAfter: error.retryAfter
-    });
-  }
-  
-  // Si es un error de quota
-  if (error.code === 'QUOTA_EXCEEDED') {
-    return res.status(429).json({
-      success: false,
-      error: 'Quota exceeded',
-      provider: error.provider
-    });
-  }
-  
-  // Error genérico
-  res.status(500).json({
-    success: false,
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : error.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
-  });
-});
-
-// ===== GRACEFUL SHUTDOWN =====
-
-const gracefulShutdown = (signal: string) => {
-  logger.info(`Received ${signal}. Starting graceful shutdown...`);
-  
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-  
-  // Force close after 10 seconds
-  setTimeout(() => {
-    logger.error('Could not close connections in time, forcefully shutting down');
+// Inicializar servicios
+async function initializeServices() {
+  try {
+    await cacheService.initialize();
+    await costTrackingService.initialize();
+    logger.info('Servicios inicializados correctamente');
+  } catch (error) {
+    logger.error('Error inicializando servicios:', error);
     process.exit(1);
-  }, 10000);
-};
+  }
+}
 
-// ===== INICIO DEL SERVIDOR =====
+// Iniciar servidor
+async function startServer() {
+  await initializeServices();
+  
+  app.listen(PORT, () => {
+    logger.info(`🚀 LLM Gateway Service iniciado en puerto ${PORT}`);
+    logger.info(`📊 Métricas disponibles en http://localhost:${PORT}/api/metrics`);
+    logger.info(`🏥 Health check en http://localhost:${PORT}/api/health`);
+  });
+}
 
-const server = app.listen(PORT, () => {
-  logger.info(`🚀 LLM Gateway running on port ${PORT}`);
-  logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
-  logger.info(`🤖 API Documentation: http://localhost:${PORT}/api`);
-  logger.info(`💰 Cost tracking: http://localhost:${PORT}/api/costs`);
-  logger.info(`📈 Metrics: http://localhost:${PORT}/api/metrics`);
-  
-  // Log available providers
-  const providers = [];
-  if (process.env.OPENAI_API_KEY) providers.push('OpenAI');
-  if (process.env.ANTHROPIC_API_KEY) providers.push('Anthropic');
-  if (process.env.GOOGLE_API_KEY) providers.push('Google');
-  
-  logger.info(`🔌 Available providers: ${providers.join(', ') || 'None configured'}`);
+// Manejo de señales de terminación
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM recibido, cerrando servidor...');
+  await cacheService.close();
+  await costTrackingService.close();
+  process.exit(0);
 });
 
-// ===== EVENT HANDLERS =====
+process.on('SIGINT', async () => {
+  logger.info('SIGINT recibido, cerrando servidor...');
+  await cacheService.close();
+  await costTrackingService.close();
+  process.exit(0);
+});
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
+// Manejo de errores no capturados
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
+  logger.error('Error no capturado:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Promesa rechazada no manejada:', reason);
   process.exit(1);
 });
 
-export default app; 
+startServer().catch((error) => {
+  logger.error('Error iniciando servidor:', error);
+  process.exit(1);
+}); 
