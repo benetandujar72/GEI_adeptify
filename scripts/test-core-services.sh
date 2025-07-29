@@ -31,6 +31,7 @@ SERVICES=(
     "user-service:3001"
     "student-service:3002"
     "course-service:3003"
+    "resource-service:3004"
 )
 
 # Función para probar un servicio

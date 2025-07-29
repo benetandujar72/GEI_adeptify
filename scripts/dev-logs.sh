@@ -26,6 +26,7 @@ SERVICES=(
     "user-service"
     "student-service"
     "course-service"
+    "resource-service"
     "api-gateway"
     "server"
     "client"
@@ -131,7 +132,7 @@ show_ports() {
     log "🔌 Puertos en uso:"
     echo "----------------------------------------"
     
-    local ports=("3000" "3001" "3002" "3003" "5000" "5173" "5432" "6379")
+    local ports=("3000" "3001" "3002" "3003" "3004" "5000" "5173" "5432" "6379")
     
     for port in "${ports[@]}"; do
         if netstat -tuln 2>/dev/null | grep -q ":$port "; then
@@ -141,6 +142,7 @@ show_ports() {
                 "3001") service_name="User Service" ;;
                 "3002") service_name="Student Service" ;;
                 "3003") service_name="Course Service" ;;
+                "3004") service_name="Resource Service" ;;
                 "5000") service_name="API Gateway" ;;
                 "5173") service_name="Client (Frontend)" ;;
                 "5432") service_name="PostgreSQL" ;;
