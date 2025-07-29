@@ -741,7 +741,7 @@ async function initializeApp() {
     // Iniciar servidor
     logger.info(`🌐 Iniciando servidor en puerto ${port}...`);
     logger.info('🔄 ANTES de server.listen()');
-    server.listen(port, \ 0.0.0.0\, () => {
+    server.listen(port, '0.0.0.0', () => {
       logger.info('🔄 DESPUÉS de server.listen() - Callback ejecutado');
       logger.info(`✅ Servidor ejecutándose en puerto ${port}`);
       logger.info(`📊 Health check: http://localhost:${port}/api/health`);
