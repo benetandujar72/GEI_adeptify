@@ -1,5 +1,5 @@
 # Dockerfile para GEI Unified Platform - Despliegue optimizado en Render
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Instalar dependencias del sistema
 RUN apk add --no-cache libc6-compat
@@ -121,7 +121,7 @@ COPY drizzle ./drizzle
 RUN echo "=== Verificando archivos de configuración ===" && \
     ls -la tsconfig.json esbuild.config.js vite.config.ts tailwind.config.ts postcss.config.js && \
     ls -la client/postcss.config.js client/tailwind.config.js client/tsconfig.node.json client/tsconfig.json client/vite.config.ts client/index.html && \
-    ls -la client/public/manifest.json client/public/logo.svg server/index.ts client/src/App.tsx && \
+    ls -la client/public/manifest.json client/public/logo.svg server/src/index.ts client/src/App.tsx && \
     ls -la shared/schema.ts && \
     ls -la render.yaml && \
     ls -la scripts/ && \
@@ -144,7 +144,7 @@ RUN echo "=== Verificando resultados del build ===" && \
     echo "✅ Build verificado correctamente"
 
 # Imagen de producción
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Instalar dependencias del sistema para producción
 RUN apk add --no-cache libc6-compat
