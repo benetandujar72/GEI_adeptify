@@ -16,14 +16,21 @@
     "rootDir": "./src",
     "baseUrl": "./src",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     },
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../types"
+    ]
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../../types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
@@ -31,4 +38,4 @@
     "**/*.test.ts",
     "**/*.spec.ts"
   ]
-} 
+}
