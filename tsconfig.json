@@ -28,12 +28,15 @@
       "@/shared/*": ["./shared/*"],
       "@/server/*": ["./server/*"]
     },
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    "typeRoots": ["./node_modules/@types", "./types"]
   },
   "include": [
     "client/src/**/*",
     "server/**/*",
-    "shared/**/*"
+    "shared/**/*",
+    "gateway/**/*",
+    "types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

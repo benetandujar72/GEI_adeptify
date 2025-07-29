@@ -8,8 +8,14 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "typeRoots": ["./node_modules/@types", "./types"]
   },
-  "include": ["index.ts", "esbuild.config.js"],
+  "include": [
+    "index.ts", 
+    "esbuild.config.js", 
+    "utils/**/*.ts",
+    "types/**/*.d.ts"
+  ],
   "exclude": ["node_modules"]
 }
