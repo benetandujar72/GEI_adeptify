@@ -1,43 +1,35 @@
-// Definiciones de tipos globales para el proyecto Adeptify
-
+// Declaraciones de tipos globales para resolver problemas de TypeScript
 declare module 'http-proxy-middleware' {
   import { RequestHandler } from 'express';
-
-  export interface ProxyOptions {
+  
+  interface ProxyOptions {
     target?: string;
     changeOrigin?: boolean;
-    pathRewrite?: { [key: string]: string } | ((path: string, req: any) => string);
+    pathRewrite?: { [key: string]: string };
     onProxyReq?: (proxyReq: any, req: any, res: any) => void;
     onProxyRes?: (proxyRes: any, req: any, res: any) => void;
-    onError?: (err: Error, req: any, res: any) => void;
-    logLevel?: 'silent' | 'error' | 'warn' | 'info' | 'debug';
-    secure?: boolean;
-    ws?: boolean;
-    xfwd?: boolean;
-    headers?: { [key: string]: string };
+    onError?: (err: any, req: any, res: any) => void;
   }
-
-  export function createProxyMiddleware(
-    context: string | string[] | ((pathname: string, req: any) => boolean),
-    options?: ProxyOptions
-  ): RequestHandler;
-
-  export function createProxyMiddleware(options: ProxyOptions): RequestHandler;
+  
+  function createProxyMiddleware(options: ProxyOptions): RequestHandler;
+  export = createProxyMiddleware;
 }
 
-// Declaraciones adicionales para otras librerías que puedan necesitar tipos
 declare module 'http-proxy' {
-  export interface ProxyOptions {
+  import { Server } from 'http';
+  
+  interface ProxyOptions {
     target?: string;
     changeOrigin?: boolean;
-    secure?: boolean;
     ws?: boolean;
     xfwd?: boolean;
   }
-
-  export class Proxy {
-    constructor(options?: ProxyOptions);
-    web(req: any, res: any, options?: ProxyOptions): void;
-    ws(req: any, socket: any, head: any, options?: ProxyOptions): void;
+  
+  class HttpProxy {
+    constructor();
+    web(req: any, res: any, options: ProxyOptions, callback?: (err: any) => void): void;
+    ws(req: any, socket: any, head: any, options: ProxyOptions, callback?: (err: any) => void): void;
   }
+  
+  export = HttpProxy;
 }
