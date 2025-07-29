@@ -24,9 +24,6 @@ RUN echo "=== Limpiando cache e instalando dependencias ===" && \
 # Copiar código fuente del servidor
 COPY server ./server
 
-# Crear façana perquè esbuild i ls trobin l'entrada
-RUN cp server/src/index.ts server/index.ts
-
 # Copiar código fuente del cliente
 COPY client/src ./client/src
 
