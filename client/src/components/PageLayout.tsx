@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { AdeptifyNavigation } from './AdeptifyNavigation';
+import AdeptifyNavigation from './AdeptifyNavigation';
 
 interface PageLayoutProps {
   children: ReactNode;
