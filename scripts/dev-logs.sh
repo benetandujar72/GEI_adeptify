@@ -3,11 +3,9 @@
 # Script para ver logs y estado de los servicios de desarrollo
 # EduAI Platform - Microservicios con MCP
 
-set -e
-
-# Colores para output
-RED='\033[0;31m'
+# Colores para la salida de la consola
 GREEN='\033[0;32m'
+RED='\033[0;31m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
@@ -21,6 +19,7 @@ SERVICES=(
     "course-service"
     "resource-service"
     "communication-service"
+    "analytics-service"
     "gateway"
 )
 
@@ -31,17 +30,18 @@ ports["student-service"]=3002
 ports["course-service"]=3003
 ports["resource-service"]=3004
 ports["communication-service"]=3005
+ports["analytics-service"]=3006
 ports["gateway"]=5000
 
 # Función para imprimir con colores
 print_header() {
-    echo -e "${CYAN}========================================${NC}"
-    echo -e "${CYAN}$1${NC}"
-    echo -e "${CYAN}========================================${NC}"
+    echo -e "${BLUE}============================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}============================================${NC}"
 }
 
 print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${CYAN}[INFO]${NC} $1"
 }
 
 print_success() {
@@ -56,21 +56,19 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Función para mostrar el estado de los servicios
+# Función para mostrar estado de servicios
 show_service_status() {
-    print_header "Service Status"
+    print_header "Estado de Servicios"
     
     for service in "${SERVICES[@]}"; do
         port=${ports[$service]}
         
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-            print_success "$service is running on port $port"
+            print_success "$service (puerto $port): RUNNING"
         else
-            print_error "$service is not running on port $port"
+            print_error "$service (puerto $port): STOPPED"
         fi
     done
-    
-    echo ""
 }
 
 # Función para mostrar logs de un servicio específico
@@ -78,149 +76,102 @@ show_service_logs() {
     local service=$1
     local lines=${2:-50}
     
-    print_header "Logs for $service (last $lines lines)"
+    print_header "Logs de $service (últimas $lines líneas)"
     
-    case $service in
-        "user-service")
-            if [ -f "microservices/user-service/logs/user-service-combined.log" ]; then
-                tail -n $lines microservices/user-service/logs/user-service-combined.log
-            else
-                print_warning "No log file found for $service"
-            fi
-            ;;
-        "student-service")
-            if [ -f "microservices/student-service/logs/student-service-combined.log" ]; then
-                tail -n $lines microservices/student-service/logs/student-service-combined.log
-            else
-                print_warning "No log file found for $service"
-            fi
-            ;;
-        "course-service")
-            if [ -f "microservices/course-service/logs/course-service-combined.log" ]; then
-                tail -n $lines microservices/course-service/logs/course-service-combined.log
-            else
-                print_warning "No log file found for $service"
-            fi
-            ;;
-        "resource-service")
-            if [ -f "microservices/resource-service/logs/resource-service-combined.log" ]; then
-                tail -n $lines microservices/resource-service/logs/resource-service-combined.log
-            else
-                print_warning "No log file found for $service"
-            fi
-            ;;
-        "communication-service")
-            if [ -f "microservices/communication-service/logs/communication-service-combined.log" ]; then
-                tail -n $lines microservices/communication-service/logs/communication-service-combined.log
-            else
-                print_warning "No log file found for $service"
-            fi
-            ;;
-        "gateway")
-            if [ -f "gateway/logs/gateway-combined.log" ]; then
-                tail -n $lines gateway/logs/gateway-combined.log
-            else
-                print_warning "No log file found for $service"
-            fi
-            ;;
-        *)
-            print_error "Unknown service: $service"
-            ;;
-    esac
+    local log_file="microservices/$service/logs/${service}-combined.log"
     
-    echo ""
+    if [ -f "$log_file" ]; then
+        tail -n $lines "$log_file"
+    else
+        print_warning "Archivo de log no encontrado: $log_file"
+        print_info "Intentando mostrar logs del proceso..."
+        
+        local port=${ports[$service]}
+        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+            print_info "Servicio $service está ejecutándose en puerto $port"
+        else
+            print_error "Servicio $service no está ejecutándose"
+        fi
+    fi
 }
 
 # Función para mostrar logs de Docker
 show_docker_logs() {
-    print_header "Docker Container Logs"
+    print_header "Logs de Contenedores Docker"
     
-    # PostgreSQL logs
+    # PostgreSQL
     if docker ps --format "table {{.Names}}" | grep -q "postgres"; then
-        print_info "PostgreSQL container logs:"
-        docker logs --tail 20 postgres 2>/dev/null || print_warning "Could not get PostgreSQL logs"
+        print_info "Logs de PostgreSQL:"
+        docker logs --tail 20 postgres 2>/dev/null || print_warning "No se pueden obtener logs de PostgreSQL"
         echo ""
     else
-        print_warning "PostgreSQL container is not running"
+        print_warning "Contenedor PostgreSQL no está ejecutándose"
     fi
     
-    # Redis logs
+    # Redis
     if docker ps --format "table {{.Names}}" | grep -q "redis"; then
-        print_info "Redis container logs:"
-        docker logs --tail 20 redis 2>/dev/null || print_warning "Could not get Redis logs"
+        print_info "Logs de Redis:"
+        docker logs --tail 20 redis 2>/dev/null || print_warning "No se pueden obtener logs de Redis"
         echo ""
     else
-        print_warning "Redis container is not running"
+        print_warning "Contenedor Redis no está ejecutándose"
     fi
 }
 
 # Función para mostrar logs de archivos
 show_file_logs() {
-    local lines=${1:-50}
+    local service=$1
+    local log_type=${2:-"combined"}
+    local lines=${3:-50}
     
-    print_header "File-based Logs (last $lines lines)"
+    print_header "Logs de archivo: $service ($log_type)"
     
-    # Buscar archivos de log en el proyecto
-    find . -name "*.log" -type f 2>/dev/null | while read -r logfile; do
-        if [ -s "$logfile" ]; then
-            print_info "Log file: $logfile"
-            tail -n $lines "$logfile"
-            echo ""
-        fi
-    done
+    local log_file="microservices/$service/logs/${service}-${log_type}.log"
+    
+    if [ -f "$log_file" ]; then
+        tail -n $lines "$log_file"
+    else
+        print_warning "Archivo de log no encontrado: $log_file"
+    fi
 }
 
 # Función para mostrar información del sistema
 show_system_info() {
-    print_header "System Information"
+    print_header "Información del Sistema"
     
-    print_info "CPU Usage:"
+    print_info "Uso de CPU:"
     top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1
     
-    print_info "Memory Usage:"
-    free -h | grep -E "Mem|Swap"
+    print_info "Uso de Memoria:"
+    free -h | grep "Mem:" | awk '{print "Total: " $2 " Used: " $3 " Free: " $4}'
     
-    print_info "Disk Usage:"
-    df -h | grep -E "Filesystem|/$"
+    print_info "Uso de Disco:"
+    df -h / | tail -1 | awk '{print "Total: " $2 " Used: " $3 " Free: " $4 " Use%: " $5}'
     
-    print_info "Network Connections:"
-    netstat -tuln | grep -E ":(3001|3002|3003|3004|3005|5000|5432|6379)" || print_warning "No relevant network connections found"
-    
-    echo ""
+    print_info "Puertos en uso:"
+    netstat -tuln | grep LISTEN | head -10
 }
 
 # Función para mostrar puertos en uso
 show_ports() {
-    print_header "Ports in Use"
+    print_header "Puertos en Uso"
     
-    local ports=(3001 3002 3003 3004 3005 5000 5432 6379)
-    
-    for port in "${ports[@]}"; do
+    for service in "${SERVICES[@]}"; do
+        port=${ports[$service]}
+        
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-            local service_name=""
-            case $port in
-                3001) service_name="User Service" ;;
-                3002) service_name="Student Service" ;;
-                3003) service_name="Course Service" ;;
-                3004) service_name="Resource Service" ;;
-                3005) service_name="Communication Service" ;;
-                5000) service_name="API Gateway" ;;
-                5432) service_name="PostgreSQL" ;;
-                6379) service_name="Redis" ;;
-            esac
-            print_success "Port $port is in use by $service_name"
+            local process=$(lsof -Pi :$port -sTCP:LISTEN | grep LISTEN | awk '{print $1}')
+            print_success "Puerto $port ($service): $process"
         else
-            print_warning "Port $port is not in use"
+            print_error "Puerto $port ($service): NO EN USO"
         fi
     done
-    
-    echo ""
 }
 
 # Función para mostrar logs en tiempo real
 show_realtime_logs() {
     print_header "Real-time Logs (Press Ctrl+C to stop)"
-    
+
     # Combinar logs de todos los servicios
     (
         tail -f microservices/user-service/logs/user-service-combined.log 2>/dev/null &
@@ -228,6 +179,7 @@ show_realtime_logs() {
         tail -f microservices/course-service/logs/course-service-combined.log 2>/dev/null &
         tail -f microservices/resource-service/logs/resource-service-combined.log 2>/dev/null &
         tail -f microservices/communication-service/logs/communication-service-combined.log 2>/dev/null &
+        tail -f microservices/analytics-service/logs/analytics-service-combined.log 2>/dev/null &
         tail -f gateway/logs/gateway-combined.log 2>/dev/null &
         wait
     ) | while read -r line; do
@@ -235,34 +187,37 @@ show_realtime_logs() {
     done
 }
 
-# Función para mostrar el menú de ayuda
+# Función para mostrar ayuda
 show_help() {
-    print_header "EduAI Platform - Development Logs"
+    print_header "Ayuda - Script de Logs de Desarrollo"
+    
+    echo "Uso: $0 [COMANDO] [SERVICIO] [OPCIONES]"
     echo ""
-    echo "Usage: $0 [OPTION]"
+    echo "Comandos disponibles:"
+    echo "  status                    - Mostrar estado de todos los servicios"
+    echo "  logs [servicio] [líneas]  - Mostrar logs de un servicio específico"
+    echo "  docker                    - Mostrar logs de contenedores Docker"
+    echo "  file [servicio] [tipo]    - Mostrar logs de archivo específico"
+    echo "  system                    - Mostrar información del sistema"
+    echo "  ports                     - Mostrar puertos en uso"
+    echo "  realtime                  - Mostrar logs en tiempo real"
+    echo "  help                      - Mostrar esta ayuda"
     echo ""
-    echo "Options:"
-    echo "  status              Show service status"
-    echo "  logs [SERVICE]      Show logs for specific service"
-    echo "  docker              Show Docker container logs"
-    echo "  files [LINES]       Show file-based logs (default: 50 lines)"
-    echo "  system              Show system information"
-    echo "  ports               Show ports in use"
-    echo "  realtime            Show real-time logs"
-    echo "  all                 Show all information"
-    echo "  help                Show this help message"
-    echo ""
-    echo "Services:"
+    echo "Servicios disponibles:"
     for service in "${SERVICES[@]}"; do
-        echo "  - $service"
+        echo "  - $service (puerto ${ports[$service]})"
     done
     echo ""
-    echo "Examples:"
-    echo "  $0 status"
-    echo "  $0 logs user-service"
-    echo "  $0 logs gateway 100"
-    echo "  $0 realtime"
+    echo "Tipos de logs disponibles:"
+    echo "  - combined (por defecto)"
+    echo "  - error"
+    echo "  - access"
     echo ""
+    echo "Ejemplos:"
+    echo "  $0 status"
+    echo "  $0 logs user-service 100"
+    echo "  $0 file user-service error"
+    echo "  $0 realtime"
 }
 
 # Función principal
@@ -272,18 +227,23 @@ main() {
             show_service_status
             ;;
         "logs")
-            if [ -n "$2" ]; then
-                show_service_logs "$2" "$3"
-            else
-                print_error "Please specify a service name"
-                echo "Available services: ${SERVICES[*]}"
+            if [ -z "$2" ]; then
+                print_error "Debe especificar un servicio"
+                show_help
+                exit 1
             fi
+            show_service_logs "$2" "$3"
             ;;
         "docker")
             show_docker_logs
             ;;
-        "files")
-            show_file_logs "$2"
+        "file")
+            if [ -z "$2" ]; then
+                print_error "Debe especificar un servicio"
+                show_help
+                exit 1
+            fi
+            show_file_logs "$2" "$3" "$4"
             ;;
         "system")
             show_system_info
@@ -293,12 +253,6 @@ main() {
             ;;
         "realtime")
             show_realtime_logs
-            ;;
-        "all")
-            show_service_status
-            show_system_info
-            show_ports
-            show_docker_logs
             ;;
         "help"|*)
             show_help
