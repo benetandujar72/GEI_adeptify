@@ -117,11 +117,14 @@ COPY scripts ./scripts
 COPY render.yaml ./
 COPY drizzle ./drizzle
 
+# Crear façana perquè esbuild i ls trobin l'entrada
+RUN cp server/src/index.ts server/index.ts
+
 # Verificar archivos de configuración críticos
 RUN echo "=== Verificando archivos de configuración ===" && \
     ls -la tsconfig.json esbuild.config.js vite.config.ts tailwind.config.ts postcss.config.js && \
     ls -la client/postcss.config.js client/tailwind.config.js client/tsconfig.node.json client/tsconfig.json client/vite.config.ts client/index.html && \
-    ls -la client/public/manifest.json client/public/logo.svg server/src/index.ts client/src/App.tsx && \
+    ls -la client/public/manifest.json client/public/logo.svg server/index.ts client/src/App.tsx && \
     ls -la shared/schema.ts && \
     ls -la render.yaml && \
     ls -la scripts/ && \
