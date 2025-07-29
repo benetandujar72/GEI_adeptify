@@ -1,12 +1,25 @@
 import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import compression from 'compression';
+import 'express-async-errors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { logger, logHttpRequest, logOrchestratorEvent } from './utils/logger.js';
+import dotenv from 'dotenv';
+
+// Importar servicios de monitoreo
+import { logger } from './services/logging.service.js';
+import { metrics } from './services/metrics.service.js';
+import { alerts } from './services/alerts.service.js';
+import { MonitoringMiddleware } from './middleware/monitoring.middleware.js';
+
+// Importar rutas
 import orchestratorRoutes from './routes/orchestrator.routes.js';
+import monitoringRoutes from './routes/monitoring.routes.js';
+
+// Importar servicios de infraestructura
+import RedisService from './services/redis.service.js';
+
+// Configurar variables de entorno
+dotenv.config();
 
 const app = express();
 const server = createServer(app);
@@ -21,7 +34,21 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3008;
 
+// ===== INICIALIZACIÓN DE SERVICIOS DE MONITOREO =====
+const loggingService = logger;
+const metricsService = metrics;
+const alertsService = alerts;
+
+// ===== INICIALIZACIÓN DE MIDDLEWARES DE MONITOREO =====
+const monitoringConfig = process.env.NODE_ENV === 'production'
+  ? MonitoringMiddleware.PRODUCTION_CONFIG
+  : MonitoringMiddleware.DEVELOPMENT_CONFIG;
+const monitoringMiddleware = new MonitoringMiddleware(monitoringConfig);
+
 // ===== CONFIGURACIÓN DE SEGURIDAD =====
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 
 // Helmet para headers de seguridad
 app.use(helmet({
@@ -88,9 +115,12 @@ const generalLimiter = rateLimit({
 app.use('/api/orchestrator', orchestratorLimiter);
 app.use(generalLimiter);
 
-// ===== MIDDLEWARE DE PROCESAMIENTO =====
+// ===== MIDDLEWARE DE MONITOREO =====
+app.use(monitoringMiddleware.monitoring());
+app.use(monitoringMiddleware.performanceLogging());
+app.use(monitoringMiddleware.auditLogging());
 
-// Compresión
+// ===== MIDDLEWARE DE PROCESAMIENTO =====
 app.use(compression({
   level: 6,
   threshold: 1024,
@@ -124,9 +154,6 @@ app.use(express.urlencoded({
   parameterLimit: 1000
 }));
 
-// Logging middleware
-app.use(logHttpRequest);
-
 // ===== RUTAS BÁSICAS =====
 
 // Ruta raíz
@@ -139,6 +166,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       api: '/api/orchestrator',
+      monitoring: '/api/monitoring',
       docs: '/api/docs'
     },
     timestamp: new Date().toISOString()
@@ -200,6 +228,18 @@ app.get('/api', (req, res) => {
       'POST /api/orchestrator/workflows/:workflowId/execute': 'Execute workflow',
       'GET /api/orchestrator/agents/metrics': 'Get agent coordinator metrics',
       
+      // Monitoring endpoints
+      'GET /api/monitoring/health': 'Get orchestrator health status',
+      'GET /api/monitoring/metrics': 'Get Prometheus metrics',
+      'GET /api/monitoring/metrics/json': 'Get metrics in JSON format',
+      'GET /api/monitoring/system/info': 'Get system information',
+      'GET /api/monitoring/alerts/status': 'Get alert status (admin only)',
+      'POST /api/monitoring/alerts/trigger': 'Trigger manual alert (admin only)',
+      'GET /api/monitoring/performance': 'Get performance statistics (admin only)',
+      'GET /api/monitoring/dependencies': 'Get dependencies status',
+      'GET /api/monitoring/mcp/metrics': 'Get MCP-specific metrics',
+      'GET /api/monitoring/mcp/services/status': 'Get MCP services status',
+      
       // General endpoints
       'GET /api/orchestrator/health': 'Get orchestrator health status',
       'GET /api/orchestrator/metrics': 'Get all metrics'
@@ -216,10 +256,13 @@ app.get('/api', (req, res) => {
 // Montar rutas del orquestador
 app.use('/api/orchestrator', orchestratorRoutes);
 
+// Montar rutas de monitoreo
+app.use('/api/monitoring', monitoringRoutes);
+
 // ===== WEBSOCKET HANDLING =====
 
 io.on('connection', (socket) => {
-  logOrchestratorEvent('websocket_connected', {
+  logger.logOrchestration('websocket_connected', {
     socketId: socket.id,
     address: socket.handshake.address,
     userAgent: socket.handshake.headers['user-agent']
@@ -228,7 +271,7 @@ io.on('connection', (socket) => {
   // Manejar eventos de orquestación en tiempo real
   socket.on('subscribe_metrics', (data) => {
     socket.join('metrics');
-    logOrchestratorEvent('metrics_subscription', {
+    logger.logOrchestration('metrics_subscription', {
       socketId: socket.id,
       data
     });
@@ -236,7 +279,7 @@ io.on('connection', (socket) => {
 
   socket.on('subscribe_services', (data) => {
     socket.join('services');
-    logOrchestratorEvent('services_subscription', {
+    logger.logOrchestration('services_subscription', {
       socketId: socket.id,
       data
     });
@@ -244,7 +287,7 @@ io.on('connection', (socket) => {
 
   socket.on('subscribe_agents', (data) => {
     socket.join('agents');
-    logOrchestratorEvent('agents_subscription', {
+    logger.logOrchestration('agents_subscription', {
       socketId: socket.id,
       data
     });
@@ -252,14 +295,14 @@ io.on('connection', (socket) => {
 
   socket.on('subscribe_contexts', (data) => {
     socket.join('contexts');
-    logOrchestratorEvent('contexts_subscription', {
+    logger.logOrchestration('contexts_subscription', {
       socketId: socket.id,
       data
     });
   });
 
   socket.on('disconnect', (reason) => {
-    logOrchestratorEvent('websocket_disconnected', {
+    logger.logOrchestration('websocket_disconnected', {
       socketId: socket.id,
       reason
     });
@@ -309,49 +352,92 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
   });
 });
 
+// ===== INICIALIZACIÓN DE SERVICIOS =====
+
+async function initializeServices() {
+  logger.info('Inicializando servicios del MCP Orchestrator...');
+  try {
+    // Inicializar Redis
+    const redisService = new RedisService();
+    await redisService.connect();
+    logger.info('Redis conectado para MCP Orchestrator');
+
+    // Inicializar sistema de alertas
+    await alertsService.start();
+    logger.info('Sistema de alertas iniciado');
+
+    // Actualizar métricas de conexiones
+    metricsService.setRedisConnections(1, 'connected');
+
+    logger.info('Servicios del MCP Orchestrator inicializados correctamente');
+  } catch (error) {
+    logger.error('Error al inicializar servicios del MCP Orchestrator', { error });
+    throw error;
+  }
+}
+
+async function checkServiceConnections() {
+  try {
+    const redisService = new RedisService();
+    await redisService.ping();
+    logger.info('Verificación de Redis: OK');
+
+    // Verificar Elasticsearch si está configurado
+    if (process.env.ELASTICSEARCH_URL) {
+      try {
+        const response = await fetch(`${process.env.ELASTICSEARCH_URL}/_cluster/health`);
+        if (response.ok) {
+          logger.info('Verificación de Elasticsearch: OK');
+        } else {
+          logger.warn('Verificación de Elasticsearch: FAILED');
+        }
+      } catch (error) {
+        logger.warn('Verificación de Elasticsearch: ERROR', { error });
+      }
+    }
+  } catch (error) {
+    logger.error('Error en verificación de conexiones', { error });
+    throw error;
+  }
+}
+
 // ===== GRACEFUL SHUTDOWN =====
 
 const gracefulShutdown = (signal: string) => {
-  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+  logger.info(`Recibida señal ${signal}, iniciando shutdown graceful del MCP Orchestrator...`);
   
-  server.close(() => {
-    logger.info('HTTP server closed');
+  server.close(async () => {
+    logger.info('Servidor HTTP cerrado');
     
     // Cerrar conexiones de WebSocket
     io.close(() => {
-      logger.info('WebSocket server closed');
+      logger.info('WebSocket server cerrado');
       
       // Limpiar recursos de los servicios
       try {
-        // Aquí se podrían agregar limpiezas específicas de los servicios
-        logger.info('Services cleanup completed');
+        // Detener sistema de alertas
+        alertsService.stop();
+        logger.info('Sistema de alertas detenido');
+        
+        // Cerrar conexiones Redis
+        const redisService = new RedisService();
+        redisService.disconnect();
+        logger.info('Conexión Redis cerrada');
+        
+        logger.info('Shutdown graceful del MCP Orchestrator completado');
+        process.exit(0);
       } catch (error) {
-        logger.error('Error during services cleanup', {
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
+        logger.error('Error durante shutdown graceful', { error });
+        process.exit(1);
       }
-      
-      process.exit(0);
     });
   });
+  
+  setTimeout(() => {
+    logger.error('Shutdown timeout alcanzado, forzando cierre');
+    process.exit(1);
+  }, 30000);
 };
-
-// ===== INICIALIZACIÓN DEL SERVIDOR =====
-
-server.listen(PORT, () => {
-  logger.info(`🚀 MCP Orchestrator Service started successfully`, {
-    port: PORT,
-    environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
-
-  logOrchestratorEvent('service_started', {
-    port: PORT,
-    environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0'
-  });
-});
 
 // ===== MANEJO DE SEÑALES =====
 
@@ -360,30 +446,55 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Manejo de excepciones no capturadas
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception', {
-    error: error.message,
-    stack: error.stack
-  });
-  
-  // En producción, es mejor cerrar el proceso
-  if (process.env.NODE_ENV === 'production') {
-    process.exit(1);
-  }
+  logger.error('Excepción no capturada', { error });
+  process.exit(1);
 });
 
 // Manejo de promesas rechazadas no capturadas
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection', {
-    reason: reason instanceof Error ? reason.message : reason,
-    stack: reason instanceof Error ? reason.stack : undefined,
-    promise: promise.toString()
-  });
-  
-  // En producción, es mejor cerrar el proceso
-  if (process.env.NODE_ENV === 'production') {
+  logger.error('Promesa rechazada no manejada', { reason, promise });
+  process.exit(1);
+});
+
+// ===== INICIALIZACIÓN DEL SERVIDOR =====
+
+async function startServer() {
+  try {
+    await initializeServices();
+    await checkServiceConnections();
+    
+    server.listen(PORT, () => {
+      logger.info(`🚀 MCP Orchestrator Service iniciado exitosamente`, {
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        service: 'mcp-orchestrator',
+        version: '1.0.0'
+      });
+
+      logger.logOrchestration('service_started', {
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0'
+      });
+
+      // Actualizar métricas iniciales
+      metricsService.updateMemoryUsage();
+      const memUsage = process.memoryUsage();
+      logger.info('Información del sistema al inicio', {
+        platform: process.platform,
+        nodeVersion: process.version,
+        memory: {
+          rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
+          heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
+          heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`
+        }
+      });
+    });
+  } catch (error) {
+    logger.error('Error al iniciar el servidor MCP Orchestrator', { error });
     process.exit(1);
   }
-});
+}
 
 // ===== MONITOREO DE MEMORIA =====
 
@@ -398,5 +509,8 @@ if (process.env.NODE_ENV === 'development') {
     });
   }, 300000); // Cada 5 minutos
 }
+
+// Iniciar el servidor
+startServer();
 
 export default app; 

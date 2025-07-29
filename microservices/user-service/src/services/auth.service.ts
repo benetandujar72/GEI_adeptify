@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { db } from '../database/connection.js';
 import { users, sessions, auditLogs } from '../database/schema.js';
 import { logger } from '../utils/logger.js';
@@ -551,5 +551,319 @@ export class AuthService {
         action
       });
     }
+  }
+
+  // ===== NUEVOS MÉTODOS PARA MICROTAREA 4 =====
+
+  /**
+   * Obtiene un usuario por ID
+   */
+  async getUserById(userId: string): Promise<Omit<User, 'passwordHash'>> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    return this.sanitizeUser(user);
+  }
+
+  /**
+   * Actualiza el perfil del usuario
+   */
+  async updateProfile(userId: string, profileData: any): Promise<Omit<User, 'passwordHash'>> {
+    const allowedFields = [
+      'firstName', 'lastName', 'phone', 'bio', 'avatar', 
+      'dateOfBirth', 'gender', 'location', 'website'
+    ];
+
+    const updateData: any = {};
+    allowedFields.forEach(field => {
+      if (profileData[field] !== undefined) {
+        updateData[field] = profileData[field];
+      }
+    });
+
+    updateData.updatedAt = new Date();
+
+    const [updatedUser] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    // Log de auditoría
+    await this.logAuditEvent(userId, 'profile.updated', 'users', userId, {
+      updatedFields: Object.keys(updateData)
+    });
+
+    return this.sanitizeUser(updatedUser);
+  }
+
+  /**
+   * Obtiene las preferencias del usuario
+   */
+  async getUserPreferences(userId: string): Promise<any> {
+    // Por ahora retornamos preferencias por defecto
+    // En el futuro esto vendría de una tabla de preferencias
+    return {
+      theme: 'light',
+      language: 'es',
+      notifications: {
+        email: true,
+        push: true,
+        sms: false
+      },
+      privacy: {
+        profileVisibility: 'public',
+        showEmail: false,
+        showPhone: false
+      }
+    };
+  }
+
+  /**
+   * Actualiza las preferencias del usuario
+   */
+  async updateUserPreferences(userId: string, preferences: any): Promise<any> {
+    // Por ahora solo validamos y retornamos las preferencias
+    // En el futuro esto se guardaría en una tabla de preferencias
+    const updatedPreferences = {
+      theme: preferences.theme || 'light',
+      language: preferences.language || 'es',
+      notifications: {
+        email: preferences.notifications?.email ?? true,
+        push: preferences.notifications?.push ?? true,
+        sms: preferences.notifications?.sms ?? false
+      },
+      privacy: {
+        profileVisibility: preferences.privacy?.profileVisibility || 'public',
+        showEmail: preferences.privacy?.showEmail ?? false,
+        showPhone: preferences.privacy?.showPhone ?? false
+      }
+    };
+
+    // Log de auditoría
+    await this.logAuditEvent(userId, 'preferences.updated', 'users', userId, {
+      updatedPreferences
+    });
+
+    return updatedPreferences;
+  }
+
+  /**
+   * Obtiene las sesiones activas del usuario
+   */
+  async getUserSessions(userId: string): Promise<any[]> {
+    const userSessions = await db.select()
+      .from(sessions)
+      .where(and(
+        eq(sessions.userId, userId),
+        isNull(sessions.revokedAt)
+      ))
+      .orderBy(sessions.createdAt);
+
+    return userSessions.map(session => ({
+      id: session.id,
+      userAgent: session.userAgent,
+      ipAddress: session.ipAddress,
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      isActive: new Date() < session.expiresAt
+    }));
+  }
+
+  /**
+   * Termina una sesión específica
+   */
+  async terminateSession(userId: string, sessionId: string): Promise<void> {
+    const [session] = await db.update(sessions)
+      .set({ revokedAt: new Date() })
+      .where(and(
+        eq(sessions.id, sessionId),
+        eq(sessions.userId, userId)
+      ))
+      .returning();
+
+    if (!session) {
+      throw new Error('Sesión no encontrada');
+    }
+
+    // Log de auditoría
+    await this.logAuditEvent(userId, 'session.terminated', 'sessions', sessionId);
+  }
+
+  /**
+   * Termina todas las sesiones excepto la actual
+   */
+  async terminateAllSessions(userId: string, currentToken: string): Promise<void> {
+    // Primero obtenemos la sesión actual
+    const currentSession = await db.select()
+      .from(sessions)
+      .where(and(
+        eq(sessions.userId, userId),
+        eq(sessions.refreshToken, currentToken),
+        isNull(sessions.revokedAt)
+      ))
+      .limit(1);
+
+    // Terminamos todas las sesiones excepto la actual
+    await db.update(sessions)
+      .set({ revokedAt: new Date() })
+      .where(and(
+        eq(sessions.userId, userId),
+        isNull(sessions.revokedAt),
+        currentSession.length > 0 ? 
+          sql`${sessions.id} != ${currentSession[0].id}` : 
+          sql`1=1`
+      ));
+
+    // Log de auditoría
+    await this.logAuditEvent(userId, 'sessions.terminated_all', 'sessions', userId);
+  }
+
+  /**
+   * Obtiene la actividad reciente del usuario
+   */
+  async getUserActivity(userId: string, options: { page: number; limit: number; type: string }): Promise<any> {
+    const offset = (options.page - 1) * options.limit;
+    
+    let whereCondition = eq(auditLogs.userId, userId);
+    
+    if (options.type !== 'all') {
+      whereCondition = and(
+        eq(auditLogs.userId, userId),
+        sql`${auditLogs.action} LIKE ${`%${options.type}%`}`
+      );
+    }
+
+    const activities = await db.select()
+      .from(auditLogs)
+      .where(whereCondition)
+      .orderBy(auditLogs.timestamp)
+      .limit(options.limit)
+      .offset(offset);
+
+    const total = await db.select({ count: sql`count(*)` })
+      .from(auditLogs)
+      .where(whereCondition);
+
+    return {
+      activities: activities.map(activity => ({
+        id: activity.id,
+        action: activity.action,
+        resource: activity.resource,
+        details: activity.details,
+        timestamp: activity.timestamp
+      })),
+      pagination: {
+        page: options.page,
+        limit: options.limit,
+        total: total[0]?.count || 0,
+        pages: Math.ceil((total[0]?.count || 0) / options.limit)
+      }
+    };
+  }
+
+  /**
+   * Actualiza el avatar del usuario
+   */
+  async updateAvatar(userId: string, avatarUrl: string): Promise<Omit<User, 'passwordHash'>> {
+    const [updatedUser] = await db.update(users)
+      .set({ 
+        avatar: avatarUrl,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    // Log de auditoría
+    await this.logAuditEvent(userId, 'avatar.updated', 'users', userId, {
+      avatarUrl
+    });
+
+    return this.sanitizeUser(updatedUser);
+  }
+
+  /**
+   * Elimina el avatar del usuario
+   */
+  async removeAvatar(userId: string): Promise<Omit<User, 'passwordHash'>> {
+    const [updatedUser] = await db.update(users)
+      .set({ 
+        avatar: null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    // Log de auditoría
+    await this.logAuditEvent(userId, 'avatar.removed', 'users', userId);
+
+    return this.sanitizeUser(updatedUser);
+  }
+
+  /**
+   * Obtiene estadísticas del usuario
+   */
+  async getUserStats(userId: string): Promise<any> {
+    // Obtener estadísticas básicas
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    // Contar sesiones activas
+    const activeSessions = await db.select({ count: sql`count(*)` })
+      .from(sessions)
+      .where(and(
+        eq(sessions.userId, userId),
+        isNull(sessions.revokedAt)
+      ));
+
+    // Contar eventos de auditoría
+    const totalActivity = await db.select({ count: sql`count(*)` })
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId));
+
+    // Obtener última actividad
+    const lastActivity = await db.select()
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(auditLogs.timestamp)
+      .limit(1);
+
+    return {
+      profile: {
+        memberSince: user.createdAt,
+        lastLogin: user.lastLoginAt,
+        status: user.status,
+        role: user.role
+      },
+      sessions: {
+        active: activeSessions[0]?.count || 0
+      },
+      activity: {
+        total: totalActivity[0]?.count || 0,
+        lastActivity: lastActivity[0]?.timestamp || null
+      },
+      security: {
+        emailVerified: user.emailVerified,
+        twoFactorEnabled: false, // Futura implementación
+        lastPasswordChange: user.updatedAt
+      }
+    };
   }
 } 

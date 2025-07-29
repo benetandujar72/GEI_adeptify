@@ -27,6 +27,8 @@ export const users = pgTable('users', {
   bio: text('bio'),
   dateOfBirth: timestamp('date_of_birth'),
   gender: genderEnum('gender'),
+  location: varchar('location', { length: 100 }),
+  website: varchar('website', { length: 255 }),
   
   // Address Information
   addressStreet: varchar('address_street', { length: 255 }),

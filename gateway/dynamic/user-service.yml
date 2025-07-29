@@ -1,0 +1,31 @@
+http:
+  routers:
+    user-service:
+      rule: "Host(`api.gei.adeptify.es`) && PathPrefix(`/api/v1/users`)"
+      service: user-service
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - user-service-auth
+        - user-service-rate-limit
+
+  services:
+    user-service:
+      loadBalancer:
+        servers:
+          - url: "http://user-service:3001"
+
+  middlewares:
+    user-service-auth:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          X-Service: "user-service"
+          X-Version: "1.0.0"
+
+    user-service-rate-limit:
+      rateLimit:
+        burst: 50
+        average: 10
+        period: "1s"
