@@ -24,6 +24,9 @@ RUN echo "=== Limpiando cache e instalando dependencias ===" && \
 # Copiar código fuente del servidor
 COPY server ./server
 
+# Crear façana perquè esbuild i ls trobin l'entrada
+RUN cp server/src/index.ts server/index.ts
+
 # Copiar código fuente del cliente
 COPY client/src ./client/src
 
@@ -116,9 +119,6 @@ COPY shared ./shared
 COPY scripts ./scripts
 COPY render.yaml ./
 COPY drizzle ./drizzle
-
-# Crear façana perquè esbuild i ls trobin l'entrada
-RUN cp server/src/index.ts server/index.ts
 
 # Verificar archivos de configuración críticos
 RUN echo "=== Verificando archivos de configuración ===" && \
