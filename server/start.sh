@@ -9,5 +9,13 @@ if [ ! -f "dist/index.js" ]; then
     npm run build
 fi
 
+# Verificar que el build fue exitoso
+if [ ! -f "dist/index.js" ]; then
+    echo "❌ Error: El build falló. dist/index.js no existe."
+    exit 1
+fi
+
+echo "✅ Build completado. Iniciando servidor..."
+
 # Iniciar servidor con binding correcto
 exec node dist/index.js

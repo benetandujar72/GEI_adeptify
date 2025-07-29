@@ -4,26 +4,66 @@ services:
     env: node
     plan: starter
     buildCommand: |
+      cd server
       npm ci
-      npm run build:server
+      npm run build
     startCommand: |
       cd server
       chmod +x start.sh
       ./start.sh
     envVars:
+      # Configuración del servidor
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
       - key: HOST
         value: 0.0.0.0
+      
+      # Base de datos PostgreSQL (Render)
+      - key: DB_HOST
+        value: dpg-d1uvb5ur433s73f5prpg-a.frankfurt-postgres.render.com
+      - key: DB_NAME
+        value: gei_db
+      - key: DB_USER
+        value: gei_db_user
+      - key: DB_PASSWORD
+        value: pV89ToE3mgCR8BMidIvsTubt2SycbqBB
+      - key: DB_PORT
+        value: 5432
+      - key: DB_SSL
+        value: true
+      
+      # URL completa de la base de datos
       - key: DATABASE_URL
-        sync: false
+        value: postgresql://gei_db_user:pV89ToE3mgCR8BMidIvsTubt2SycbqBB@dpg-d1uvb5ur433s73f5prpg-a.frankfurt-postgres.render.com:5432/gei_db?sslmode=require
+      
+      # Clave secreta para sesiones
+      - key: SESSION_SECRET
+        value: gei_adeptify_session_secret_2024_secure_key_123456789_abcdefghijklmnop
+      
+      # Google OAuth Configuration
+      - key: GOOGLE_CLIENT_ID
+        value: 1080986221149-kk92eavrakaci64feloqtne5p79inphp.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
+        value: 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
+      
+      # Google Gemini AI API
+      - key: GEMINI_API_KEY
+        value: AIzaSyB9bwid0oHPk-1ettsSdCU_IpzsMFojscc
+      
+      # Configuración adicional
+      - key: LOG_LEVEL
+        value: info
+      - key: CORS_ORIGIN
+        value: https://gei.adeptify.es
+      - key: ENABLE_METRICS
+        value: true
+      
+      # Variables opcionales (pueden configurarse manualmente en Render)
       - key: REDIS_URL
         sync: false
       - key: JWT_SECRET
-        sync: false
-      - key: SESSION_SECRET
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -38,18 +78,14 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: FRONTEND_URL
-        value: https://eduai-platform.com
-      - key: LOG_LEVEL
-        value: info
-      - key: ENABLE_METRICS
-        value: true
+        value: https://gei.adeptify.es
     healthCheckPath: /api/health
     autoDeploy: true
 
 databases:
   - name: eduai-postgres
-    databaseName: eduai
-    user: postgres
+    databaseName: gei_db
+    user: gei_db_user
     plan: starter
 
   - name: eduai-redis
