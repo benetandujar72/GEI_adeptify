@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script para ver logs de servicios en desarrollo
+# Script para ver logs y estado de los servicios de desarrollo
 # EduAI Platform - Microservicios con MCP
 
 set -e
@@ -10,238 +10,298 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Función para logging
-log() {
-    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
-}
-
-warn() {
-    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}"
-}
-
-# Configuración
+# Configuración de servicios
 SERVICES=(
     "user-service"
     "student-service"
     "course-service"
     "resource-service"
-    "api-gateway"
-    "server"
-    "client"
+    "communication-service"
+    "gateway"
 )
 
-# Función para mostrar logs de un servicio
-show_service_logs() {
-    local service_name=$1
-    local pid_file=".pids/${service_name}.pid"
+# Mapeo de puertos
+declare -A ports
+ports["user-service"]=3001
+ports["student-service"]=3002
+ports["course-service"]=3003
+ports["resource-service"]=3004
+ports["communication-service"]=3005
+ports["gateway"]=5000
+
+# Función para imprimir con colores
+print_header() {
+    echo -e "${CYAN}========================================${NC}"
+    echo -e "${CYAN}$1${NC}"
+    echo -e "${CYAN}========================================${NC}"
+}
+
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+# Función para mostrar el estado de los servicios
+show_service_status() {
+    print_header "Service Status"
     
-    if [ -f "$pid_file" ]; then
-        local pid=$(cat "$pid_file")
-        if kill -0 "$pid" 2>/dev/null; then
-            log "📋 Logs de ${service_name} (PID: $pid):"
-            echo "----------------------------------------"
-            # En desarrollo, los logs van a la consola, así que no podemos capturarlos directamente
-            # Pero podemos mostrar información del proceso
-            ps -p "$pid" -o pid,ppid,cmd,etime 2>/dev/null || echo "Proceso no encontrado"
+    for service in "${SERVICES[@]}"; do
+        port=${ports[$service]}
+        
+        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+            print_success "$service is running on port $port"
         else
-            warn "⚠ ${service_name} no está ejecutándose (PID: $pid)"
+            print_error "$service is not running on port $port"
         fi
-    else
-        warn "⚠ No se encontró PID para ${service_name}"
-    fi
+    done
+    
+    echo ""
+}
+
+# Función para mostrar logs de un servicio específico
+show_service_logs() {
+    local service=$1
+    local lines=${2:-50}
+    
+    print_header "Logs for $service (last $lines lines)"
+    
+    case $service in
+        "user-service")
+            if [ -f "microservices/user-service/logs/user-service-combined.log" ]; then
+                tail -n $lines microservices/user-service/logs/user-service-combined.log
+            else
+                print_warning "No log file found for $service"
+            fi
+            ;;
+        "student-service")
+            if [ -f "microservices/student-service/logs/student-service-combined.log" ]; then
+                tail -n $lines microservices/student-service/logs/student-service-combined.log
+            else
+                print_warning "No log file found for $service"
+            fi
+            ;;
+        "course-service")
+            if [ -f "microservices/course-service/logs/course-service-combined.log" ]; then
+                tail -n $lines microservices/course-service/logs/course-service-combined.log
+            else
+                print_warning "No log file found for $service"
+            fi
+            ;;
+        "resource-service")
+            if [ -f "microservices/resource-service/logs/resource-service-combined.log" ]; then
+                tail -n $lines microservices/resource-service/logs/resource-service-combined.log
+            else
+                print_warning "No log file found for $service"
+            fi
+            ;;
+        "communication-service")
+            if [ -f "microservices/communication-service/logs/communication-service-combined.log" ]; then
+                tail -n $lines microservices/communication-service/logs/communication-service-combined.log
+            else
+                print_warning "No log file found for $service"
+            fi
+            ;;
+        "gateway")
+            if [ -f "gateway/logs/gateway-combined.log" ]; then
+                tail -n $lines gateway/logs/gateway-combined.log
+            else
+                print_warning "No log file found for $service"
+            fi
+            ;;
+        *)
+            print_error "Unknown service: $service"
+            ;;
+    esac
+    
     echo ""
 }
 
 # Función para mostrar logs de Docker
 show_docker_logs() {
-    log "🐳 Logs de contenedores Docker:"
-    echo "----------------------------------------"
+    print_header "Docker Container Logs"
     
     # PostgreSQL logs
-    if docker ps | grep -q "postgres"; then
-        log "📊 PostgreSQL logs:"
-        docker logs --tail=10 gei-postgres-dev 2>/dev/null || echo "No se pudieron obtener logs de PostgreSQL"
+    if docker ps --format "table {{.Names}}" | grep -q "postgres"; then
+        print_info "PostgreSQL container logs:"
+        docker logs --tail 20 postgres 2>/dev/null || print_warning "Could not get PostgreSQL logs"
         echo ""
+    else
+        print_warning "PostgreSQL container is not running"
     fi
     
     # Redis logs
-    if docker ps | grep -q "redis"; then
-        log "🔴 Redis logs:"
-        docker logs --tail=10 gei-redis-dev 2>/dev/null || echo "No se pudieron obtener logs de Redis"
+    if docker ps --format "table {{.Names}}" | grep -q "redis"; then
+        print_info "Redis container logs:"
+        docker logs --tail 20 redis 2>/dev/null || print_warning "Could not get Redis logs"
         echo ""
+    else
+        print_warning "Redis container is not running"
     fi
 }
 
 # Función para mostrar logs de archivos
 show_file_logs() {
-    log "📄 Logs de archivos:"
-    echo "----------------------------------------"
+    local lines=${1:-50}
     
-    # Gateway logs
-    if [ -f "logs/gateway-combined.log" ]; then
-        log "🔗 Gateway logs (últimas 10 líneas):"
-        tail -10 logs/gateway-combined.log 2>/dev/null || echo "No se pudieron leer logs del gateway"
-        echo ""
-    fi
+    print_header "File-based Logs (last $lines lines)"
     
-    # Error logs
-    if [ -f "logs/gateway-error.log" ]; then
-        log "❌ Gateway error logs (últimas 10 líneas):"
-        tail -10 logs/gateway-error.log 2>/dev/null || echo "No se pudieron leer logs de errores del gateway"
-        echo ""
-    fi
-}
-
-# Función para mostrar estado de servicios
-show_service_status() {
-    log "📊 Estado de servicios:"
-    echo "----------------------------------------"
-    
-    for service in "${SERVICES[@]}"; do
-        local pid_file=".pids/${service}.pid"
-        
-        if [ -f "$pid_file" ]; then
-            local pid=$(cat "$pid_file")
-            if kill -0 "$pid" 2>/dev/null; then
-                echo "✅ ${service}: Ejecutándose (PID: $pid)"
-            else
-                echo "❌ ${service}: No ejecutándose (PID: $pid - muerto)"
-            fi
-        else
-            echo "⚠️  ${service}: PID no encontrado"
+    # Buscar archivos de log en el proyecto
+    find . -name "*.log" -type f 2>/dev/null | while read -r logfile; do
+        if [ -s "$logfile" ]; then
+            print_info "Log file: $logfile"
+            tail -n $lines "$logfile"
+            echo ""
         fi
     done
-    echo ""
 }
 
 # Función para mostrar información del sistema
 show_system_info() {
-    log "💻 Información del sistema:"
-    echo "----------------------------------------"
-    echo "CPU Usage: $(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)%"
-    echo "Memory Usage: $(free | grep Mem | awk '{printf("%.2f%%", $3/$2 * 100.0)}')"
-    echo "Disk Usage: $(df -h / | awk 'NR==2 {print $5}')"
-    echo "Uptime: $(uptime -p)"
+    print_header "System Information"
+    
+    print_info "CPU Usage:"
+    top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1
+    
+    print_info "Memory Usage:"
+    free -h | grep -E "Mem|Swap"
+    
+    print_info "Disk Usage:"
+    df -h | grep -E "Filesystem|/$"
+    
+    print_info "Network Connections:"
+    netstat -tuln | grep -E ":(3001|3002|3003|3004|3005|5000|5432|6379)" || print_warning "No relevant network connections found"
+    
     echo ""
 }
 
 # Función para mostrar puertos en uso
 show_ports() {
-    log "🔌 Puertos en uso:"
-    echo "----------------------------------------"
+    print_header "Ports in Use"
     
-    local ports=("3000" "3001" "3002" "3003" "3004" "5000" "5173" "5432" "6379")
+    local ports=(3001 3002 3003 3004 3005 5000 5432 6379)
     
     for port in "${ports[@]}"; do
-        if netstat -tuln 2>/dev/null | grep -q ":$port "; then
+        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
             local service_name=""
             case $port in
-                "3000") service_name="Server (Legacy)" ;;
-                "3001") service_name="User Service" ;;
-                "3002") service_name="Student Service" ;;
-                "3003") service_name="Course Service" ;;
-                "3004") service_name="Resource Service" ;;
-                "5000") service_name="API Gateway" ;;
-                "5173") service_name="Client (Frontend)" ;;
-                "5432") service_name="PostgreSQL" ;;
-                "6379") service_name="Redis" ;;
+                3001) service_name="User Service" ;;
+                3002) service_name="Student Service" ;;
+                3003) service_name="Course Service" ;;
+                3004) service_name="Resource Service" ;;
+                3005) service_name="Communication Service" ;;
+                5000) service_name="API Gateway" ;;
+                5432) service_name="PostgreSQL" ;;
+                6379) service_name="Redis" ;;
             esac
-            echo "✅ Puerto $port: $service_name"
+            print_success "Port $port is in use by $service_name"
         else
-            echo "❌ Puerto $port: No en uso"
+            print_warning "Port $port is not in use"
         fi
     done
+    
     echo ""
 }
 
 # Función para mostrar logs en tiempo real
 show_realtime_logs() {
-    log "🔄 Logs en tiempo real (Ctrl+C para salir):"
-    echo "----------------------------------------"
+    print_header "Real-time Logs (Press Ctrl+C to stop)"
     
-    # Crear un archivo temporal para combinar logs
-    local temp_log_file="/tmp/eduai_combined_logs.log"
-    
-    # Función para limpiar al salir
-    cleanup() {
-        rm -f "$temp_log_file"
-        exit 0
-    }
-    
-    trap cleanup SIGINT SIGTERM
-    
-    # Iniciar tail en archivos de log si existen
-    if [ -f "logs/gateway-combined.log" ]; then
-        tail -f logs/gateway-combined.log > "$temp_log_file" &
-    fi
-    
-    # Mostrar logs combinados
-    if [ -f "$temp_log_file" ]; then
-        tail -f "$temp_log_file"
-    else
-        echo "No hay archivos de log disponibles para mostrar en tiempo real"
-    fi
+    # Combinar logs de todos los servicios
+    (
+        tail -f microservices/user-service/logs/user-service-combined.log 2>/dev/null &
+        tail -f microservices/student-service/logs/student-service-combined.log 2>/dev/null &
+        tail -f microservices/course-service/logs/course-service-combined.log 2>/dev/null &
+        tail -f microservices/resource-service/logs/resource-service-combined.log 2>/dev/null &
+        tail -f microservices/communication-service/logs/communication-service-combined.log 2>/dev/null &
+        tail -f gateway/logs/gateway-combined.log 2>/dev/null &
+        wait
+    ) | while read -r line; do
+        echo "$(date '+%H:%M:%S') $line"
+    done
+}
+
+# Función para mostrar el menú de ayuda
+show_help() {
+    print_header "EduAI Platform - Development Logs"
+    echo ""
+    echo "Usage: $0 [OPTION]"
+    echo ""
+    echo "Options:"
+    echo "  status              Show service status"
+    echo "  logs [SERVICE]      Show logs for specific service"
+    echo "  docker              Show Docker container logs"
+    echo "  files [LINES]       Show file-based logs (default: 50 lines)"
+    echo "  system              Show system information"
+    echo "  ports               Show ports in use"
+    echo "  realtime            Show real-time logs"
+    echo "  all                 Show all information"
+    echo "  help                Show this help message"
+    echo ""
+    echo "Services:"
+    for service in "${SERVICES[@]}"; do
+        echo "  - $service"
+    done
+    echo ""
+    echo "Examples:"
+    echo "  $0 status"
+    echo "  $0 logs user-service"
+    echo "  $0 logs gateway 100"
+    echo "  $0 realtime"
+    echo ""
 }
 
 # Función principal
 main() {
-    local command=${1:-"status"}
-    
-    case $command in
+    case "${1:-help}" in
         "status")
-            log "📊 Estado de servicios - EduAI Platform"
-            echo ""
             show_service_status
-            show_ports
-            show_system_info
             ;;
-        "services")
-            log "📋 Logs de servicios individuales"
-            echo ""
-            for service in "${SERVICES[@]}"; do
-                show_service_logs "$service"
-            done
+        "logs")
+            if [ -n "$2" ]; then
+                show_service_logs "$2" "$3"
+            else
+                print_error "Please specify a service name"
+                echo "Available services: ${SERVICES[*]}"
+            fi
             ;;
         "docker")
-            log "🐳 Logs de contenedores Docker"
-            echo ""
             show_docker_logs
             ;;
         "files")
-            log "📄 Logs de archivos"
-            echo ""
-            show_file_logs
+            show_file_logs "$2"
             ;;
-        "realtime"|"live")
+        "system")
+            show_system_info
+            ;;
+        "ports")
+            show_ports
+            ;;
+        "realtime")
             show_realtime_logs
             ;;
         "all")
-            log "📊 Información completa - EduAI Platform"
-            echo ""
             show_service_status
-            show_ports
             show_system_info
-            echo ""
+            show_ports
             show_docker_logs
-            show_file_logs
             ;;
-        *)
-            echo "Uso: $0 [comando]"
-            echo ""
-            echo "Comandos disponibles:"
-            echo "  status    - Mostrar estado de servicios y puertos"
-            echo "  services  - Mostrar logs de servicios individuales"
-            echo "  docker    - Mostrar logs de contenedores Docker"
-            echo "  files     - Mostrar logs de archivos"
-            echo "  realtime  - Mostrar logs en tiempo real"
-            echo "  all       - Mostrar toda la información"
-            echo ""
-            echo "Ejemplos:"
-            echo "  $0 status"
-            echo "  $0 realtime"
-            echo "  $0 all"
+        "help"|*)
+            show_help
             ;;
     esac
 }

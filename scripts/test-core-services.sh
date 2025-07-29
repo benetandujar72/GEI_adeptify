@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Script para probar los servicios core
-# EduAI Platform - Microservicios con MCP
+# Script para probar los servicios core de la plataforma EduAI
+# Incluye: User Service, Student Service, Course Service, Resource Service, Communication Service y API Gateway
 
 set -e
 
@@ -12,194 +12,185 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Función para logging
-log() {
-    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
-}
-
-warn() {
-    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}"
-}
-
-error() {
-    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
-    exit 1
-}
-
 # Configuración
 SERVICES=(
     "user-service:3001"
     "student-service:3002"
     "course-service:3003"
     "resource-service:3004"
+    "communication-service:3005"
+    "gateway:5000"
 )
 
-# Función para probar un servicio
-test_service() {
+# Función para imprimir con colores
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+# Función para hacer una petición HTTP y verificar la respuesta
+test_endpoint() {
     local service_name=$1
     local port=$2
-    local base_url="http://localhost:${port}"
+    local endpoint=$3
+    local expected_status=${4:-200}
     
-    log "Probando ${service_name} en puerto ${port}..."
+    print_status "Testing $service_name on port $port - $endpoint"
     
-    # Probar health check
-    if curl -f -s "${base_url}/health" > /dev/null 2>&1; then
-        log "✓ ${service_name} health check OK"
+    if curl -s -f "http://localhost:$port$endpoint" > /dev/null 2>&1; then
+        print_success "$service_name is responding on $endpoint"
+        return 0
     else
-        error "✗ ${service_name} health check FAILED"
+        print_error "$service_name is not responding on $endpoint"
+        return 1
     fi
-    
-    # Probar root endpoint
-    if curl -f -s "${base_url}/" > /dev/null 2>&1; then
-        log "✓ ${service_name} root endpoint OK"
-    else
-        warn "⚠ ${service_name} root endpoint not responding"
-    fi
-    
-    # Probar endpoint específico del servicio
-    case $service_name in
-        "user-service")
-            if curl -f -s "${base_url}/users" > /dev/null 2>&1; then
-                log "✓ ${service_name} users endpoint OK"
-            else
-                warn "⚠ ${service_name} users endpoint not responding"
-            fi
-            ;;
-        "student-service")
-            if curl -f -s "${base_url}/students" > /dev/null 2>&1; then
-                log "✓ ${service_name} students endpoint OK"
-            else
-                warn "⚠ ${service_name} students endpoint not responding"
-            fi
-            ;;
-        "course-service")
-            if curl -f -s "${base_url}/courses" > /dev/null 2>&1; then
-                log "✓ ${service_name} courses endpoint OK"
-            else
-                warn "⚠ ${service_name} courses endpoint not responding"
-            fi
-            ;;
-    esac
-    
-    echo ""
 }
 
-# Función para probar API Gateway
-test_gateway() {
-    log "Probando API Gateway..."
-    
-    local gateway_url="http://localhost:5000"
-    
-    # Probar health check del gateway
-    if curl -f -s "${gateway_url}/health" > /dev/null 2>&1; then
-        log "✓ API Gateway health check OK"
+# Función para verificar si un puerto está en uso
+check_port() {
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 0
     else
-        error "✗ API Gateway health check FAILED"
+        return 1
     fi
-    
-    # Probar status del gateway
-    if curl -f -s "${gateway_url}/status" > /dev/null 2>&1; then
-        log "✓ API Gateway status endpoint OK"
-    else
-        warn "⚠ API Gateway status endpoint not responding"
-    fi
-    
-    # Probar routing a microservicios
-    if curl -f -s "${gateway_url}/api/v1/users" > /dev/null 2>&1; then
-        log "✓ API Gateway -> User Service routing OK"
-    else
-        warn "⚠ API Gateway -> User Service routing not working"
-    fi
-    
-    if curl -f -s "${gateway_url}/api/v1/students" > /dev/null 2>&1; then
-        log "✓ API Gateway -> Student Service routing OK"
-    else
-        warn "⚠ API Gateway -> Student Service routing not working"
-    fi
-    
-    if curl -f -s "${gateway_url}/api/v1/courses" > /dev/null 2>&1; then
-        log "✓ API Gateway -> Course Service routing OK"
-    else
-        warn "⚠ API Gateway -> Course Service routing not working"
-    fi
-    
-    echo ""
 }
 
-# Función para probar base de datos
-test_database() {
-    log "Probando conexión a base de datos..."
+# Función para verificar contenedores Docker
+check_docker_containers() {
+    print_status "Checking Docker containers..."
     
-    # Verificar que PostgreSQL esté ejecutándose
-    if docker ps | grep -q "postgres"; then
-        log "✓ PostgreSQL container está ejecutándose"
+    # Verificar PostgreSQL
+    if docker ps --format "table {{.Names}}" | grep -q "postgres"; then
+        print_success "PostgreSQL container is running"
     else
-        warn "⚠ PostgreSQL container no está ejecutándose"
+        print_warning "PostgreSQL container is not running"
     fi
     
-    # Verificar que Redis esté ejecutándose
-    if docker ps | grep -q "redis"; then
-        log "✓ Redis container está ejecutándose"
+    # Verificar Redis
+    if docker ps --format "table {{.Names}}" | grep -q "redis"; then
+        print_success "Redis container is running"
     else
-        warn "⚠ Redis container no está ejecutándose"
+        print_warning "Redis container is not running"
     fi
-    
-    echo ""
 }
 
-# Función para mostrar información detallada de un servicio
-show_service_info() {
-    local service_name=$1
-    local port=$2
-    local base_url="http://localhost:${port}"
-    
-    log "Información detallada de ${service_name}:"
-    
-    # Health check detallado
-    if response=$(curl -s "${base_url}/health" 2>/dev/null); then
-        echo "  Health Status: $(echo $response | jq -r '.status' 2>/dev/null || echo 'unknown')"
-        echo "  Database: $(echo $response | jq -r '.database' 2>/dev/null || echo 'unknown')"
-        echo "  Uptime: $(echo $response | jq -r '.uptime' 2>/dev/null || echo 'unknown')"
-        echo "  Environment: $(echo $response | jq -r '.environment' 2>/dev/null || echo 'unknown')"
-    else
-        echo "  Health Status: UNREACHABLE"
-    fi
-    
-    echo ""
-}
-
-# Función principal
+# Función principal de testing
 main() {
-    log "🧪 Iniciando pruebas de servicios core - EduAI Platform"
-    log "📅 Fecha: $(date)"
-    log "🏗️  Arquitectura: Microservicios con MCP"
+    echo "🚀 Starting EduAI Platform Core Services Test"
+    echo "=============================================="
+    
+    # Verificar contenedores Docker
+    check_docker_containers
     echo ""
     
-    # Probar infraestructura
-    test_database
+    # Test de cada servicio
+    local all_tests_passed=true
     
-    # Probar servicios individuales
-    log "🔍 Probando servicios individuales..."
     for service in "${SERVICES[@]}"; do
         IFS=':' read -r service_name port <<< "$service"
-        test_service "$service_name" "$port"
+        
+        echo "Testing $service_name..."
+        
+        # Verificar si el puerto está en uso
+        if check_port $port; then
+            print_success "$service_name is running on port $port"
+            
+            # Test de health check
+            if test_endpoint "$service_name" "$port" "/health"; then
+                print_success "$service_name health check passed"
+            else
+                print_error "$service_name health check failed"
+                all_tests_passed=false
+            fi
+            
+            # Test de root endpoint
+            if test_endpoint "$service_name" "$port" "/"; then
+                print_success "$service_name root endpoint is accessible"
+            else
+                print_warning "$service_name root endpoint is not accessible"
+            fi
+            
+        else
+            print_error "$service_name is not running on port $port"
+            all_tests_passed=false
+        fi
+        
+        echo ""
     done
     
-    # Probar API Gateway
-    log "🔍 Probando API Gateway..."
-    test_gateway
+    # Test específico del API Gateway
+    echo "Testing API Gateway specific endpoints..."
     
-    # Mostrar información detallada
-    log "📊 Información detallada de servicios:"
-    for service in "${SERVICES[@]}"; do
-        IFS=':' read -r service_name port <<< "$service"
-        show_service_info "$service_name" "$port"
-    done
+    # Test de status del gateway
+    if test_endpoint "Gateway" "5000" "/status"; then
+        print_success "Gateway status endpoint is working"
+    else
+        print_warning "Gateway status endpoint is not working"
+    fi
     
-    log "🎉 Pruebas completadas!"
-    log "💡 Para ver logs detallados: ./scripts/dev-logs.sh"
-    log "💡 Para reiniciar servicios: ./scripts/dev-stop.sh && ./scripts/dev-start.sh"
+    # Test de routing a través del gateway
+    print_status "Testing gateway routing to services..."
+    
+    # Test routing a User Service
+    if curl -s -f "http://localhost:5000/api/v1/users" > /dev/null 2>&1; then
+        print_success "Gateway routing to User Service is working"
+    else
+        print_warning "Gateway routing to User Service is not working"
+    fi
+    
+    # Test routing a Student Service
+    if curl -s -f "http://localhost:5000/api/v1/students" > /dev/null 2>&1; then
+        print_success "Gateway routing to Student Service is working"
+    else
+        print_warning "Gateway routing to Student Service is not working"
+    fi
+    
+    # Test routing a Course Service
+    if curl -s -f "http://localhost:5000/api/v1/courses" > /dev/null 2>&1; then
+        print_success "Gateway routing to Course Service is working"
+    else
+        print_warning "Gateway routing to Course Service is not working"
+    fi
+    
+    # Test routing a Resource Service
+    if curl -s -f "http://localhost:5000/api/v1/resources" > /dev/null 2>&1; then
+        print_success "Gateway routing to Resource Service is working"
+    else
+        print_warning "Gateway routing to Resource Service is not working"
+    fi
+    
+    # Test routing a Communication Service
+    if curl -s -f "http://localhost:5000/api/v1/communications" > /dev/null 2>&1; then
+        print_success "Gateway routing to Communication Service is working"
+    else
+        print_warning "Gateway routing to Communication Service is not working"
+    fi
+    
+    echo ""
+    echo "=============================================="
+    
+    if [ "$all_tests_passed" = true ]; then
+        print_success "All core services are running and responding correctly!"
+        echo "🎉 EduAI Platform is ready for development!"
+        exit 0
+    else
+        print_error "Some services are not running or not responding correctly."
+        echo "Please check the services and try again."
+        exit 1
+    fi
 }
 
-# Ejecutar función principal
+# Ejecutar el script principal
 main "$@"
