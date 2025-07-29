@@ -18,7 +18,7 @@ COPY client/public ./client/public
 RUN echo "=== Limpiando cache e instalando dependencias ===" && \
     rm -rf node_modules package-lock.json && \
     npm cache clean --force && \
-    npm install --ignore-scripts && \
+    npm install --ignore-scripts --no-optional && \
     echo "✅ Dependencias instaladas correctamente"
 
 # Copiar código fuente del servidor

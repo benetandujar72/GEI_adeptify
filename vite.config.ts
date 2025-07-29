@@ -1,23 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { fileURLToPath, URL } from 'node:url';
+import path from 'path';
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   root: './client',
-  build: {
-    outDir: '../dist/client',
-    emptyOutDir: true,
-  },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./client/src', import.meta.url)),
-      '@/components': fileURLToPath(new URL('./client/src/components', import.meta.url)),
-      '@/lib': fileURLToPath(new URL('./client/src/lib', import.meta.url)),
-      '@/hooks': fileURLToPath(new URL('./client/src/hooks', import.meta.url)),
-      '@/context': fileURLToPath(new URL('./client/src/context', import.meta.url)),
-      '@/pages': fileURLToPath(new URL('./client/src/pages', import.meta.url)),
-      '@/shared': fileURLToPath(new URL('./shared', import.meta.url)),
+      '@': path.resolve(__dirname, './client/src'),
     },
   },
   server: {
@@ -26,14 +17,59 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://localhost:3000',
-        ws: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request to the Target:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        },
       },
     },
   },
-  define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+  build: {
+    outDir: '../dist/client',
+    sourcemap: false, // Deshabilitar sourcemaps en producción
+    emptyOutDir: true, // Limpiar el directorio de salida
+    rollupOptions: {
+      output: {
+        // Configuración más simple para evitar problemas con chunks
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: undefined, // Deshabilitar manualChunks para evitar problemas
+      },
+      external: [], // Asegurar que FullCalendar no se marque como externo
+    },
+    // Configuraciones adicionales para Docker
+    target: 'es2015',
+    minify: 'esbuild',
+    chunkSizeWarningLimit: 1000,
   },
+  define: {
+    'process.env': {},
+    // Definir variables de entorno para el cliente
+    __PROD__: JSON.stringify(process.env.NODE_ENV === 'production'),
+    __DEV__: JSON.stringify(process.env.NODE_ENV === 'development'),
+  },
+  // Configuración para evitar problemas en Docker
+  optimizeDeps: {
+    include: [
+      'react', 
+      'react-dom', 
+      'wouter', 
+      '@tanstack/react-query', 
+      'sonner',
+      '@fullcalendar/react',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/interaction',
+      '@fullcalendar/core'
+    ]
+  }
 }); 

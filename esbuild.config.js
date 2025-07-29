@@ -32,7 +32,7 @@ const externalDependencies = [
 ];
 
 esbuild.build({
-  entryPoints: ['server/index.ts'],
+  entryPoints: ['server/src/index.ts'],
   bundle: true,
   platform: 'node',
   format: 'esm',

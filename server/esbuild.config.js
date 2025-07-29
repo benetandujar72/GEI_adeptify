@@ -9,7 +9,8 @@ esbuild.build({
   external: ['pg-native'],
   sourcemap: true,
   minify: process.env.NODE_ENV === 'production',
+  format: 'esm',
   define: {
-    'process.env.NODE_ENV': ""
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   }
 }).catch(() => process.exit(1));
