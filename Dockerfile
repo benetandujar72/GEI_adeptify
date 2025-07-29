@@ -18,7 +18,7 @@ COPY client/public ./client/public
 RUN echo "=== Limpiando cache e instalando dependencias ===" && \
     rm -rf node_modules package-lock.json && \
     npm cache clean --force && \
-    npm install --ignore-scripts --no-optional && \
+    npm install --ignore-scripts && \
     echo "✅ Dependencias instaladas correctamente"
 
 # Copiar código fuente del servidor
@@ -160,7 +160,7 @@ WORKDIR /app
 COPY --from=base /app/package*.json ./
 
 # Instalar solo dependencias de producción
-RUN npm install --production --ignore-scripts && \
+RUN npm install --production --ignore-scripts --include=optional && \
     npm cache clean --force
 
 # Copiar archivos construidos
