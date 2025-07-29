@@ -3,10 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { logger } from './utils/logger';
+import { checkConnection } from './database';
 import courseRoutes from './routes/course.routes';
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3003;
 
 // ===== MIDDLEWARE DE SEGURIDAD =====
 
@@ -69,7 +70,36 @@ app.use((req, res, next) => {
 
 // ===== RUTAS =====
 
-// Health check básico
+// Health check completo
+app.get('/health', async (req, res) => {
+  try {
+    const dbConnected = await checkConnection();
+    const status = dbConnected ? 'healthy' : 'unhealthy';
+    const statusCode = dbConnected ? 200 : 503;
+
+    res.status(statusCode).json({
+      success: true,
+      service: 'course-service',
+      status,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbConnected ? 'connected' : 'disconnected',
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    res.status(503).json({
+      success: false,
+      service: 'course-service',
+      status: 'unhealthy',
+      error: 'Health check failed',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Root endpoint
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -82,7 +112,7 @@ app.get('/', (req, res) => {
 });
 
 // API routes
-app.use('/api', courseRoutes);
+app.use('/courses', courseRoutes);
 
 // ===== MIDDLEWARE DE ERROR HANDLING =====
 
@@ -98,84 +128,51 @@ app.use('*', (req, res) => {
 });
 
 // Global error handler
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error:', error);
-  
-  // Si es un error de validación de Zod
-  if (error.name === 'ZodError') {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation error',
-      details: error.errors
-    });
-  }
-  
-  // Si es un error de base de datos
-  if (error.code === '23505') { // Unique constraint violation
-    return res.status(409).json({
-      success: false,
-      error: 'Resource already exists',
-      details: error.detail
-    });
-  }
-  
-  if (error.code === '23503') { // Foreign key constraint violation
-    return res.status(400).json({
-      success: false,
-      error: 'Referenced resource does not exist',
-      details: error.detail
-    });
-  }
-  
-  // Error genérico
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('Unhandled error:', err);
   res.status(500).json({
     success: false,
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : error.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
 });
 
-// ===== GRACEFUL SHUTDOWN =====
+// ===== INICIALIZACIÓN DEL SERVIDOR =====
+
+async function startServer() {
+  try {
+    // Verificar conexión a la base de datos
+    const dbConnected = await checkConnection();
+    if (!dbConnected) {
+      logger.error('Failed to connect to database');
+      process.exit(1);
+    }
+    
+    logger.info('Database connection established');
+    
+    // Iniciar servidor
+    app.listen(PORT, () => {
+      logger.info(`🚀 Course Service running on port ${PORT}`);
+      logger.info(`📊 Health check: http://localhost:${PORT}/health`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// ===== MANEJO DE SEÑALES =====
 
 const gracefulShutdown = (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
   
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-  
-  // Force close after 10 seconds
-  setTimeout(() => {
-    logger.error('Could not close connections in time, forcefully shutting down');
-    process.exit(1);
-  }, 10000);
+  process.exit(0);
 };
-
-// ===== INICIO DEL SERVIDOR =====
-
-const server = app.listen(PORT, () => {
-  logger.info(`🚀 Course Service running on port ${PORT}`);
-  logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
-  logger.info(`📚 API Documentation: http://localhost:${PORT}/api`);
-});
-
-// ===== EVENT HANDLERS =====
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
-  process.exit(1);
-});
+// ===== INICIAR SERVIDOR =====
 
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
-
-export default app; 
+startServer(); 

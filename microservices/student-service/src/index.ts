@@ -12,7 +12,7 @@ import studentRoutes from './routes/student.routes';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 8002;
+const PORT = process.env.PORT || 3002;
 
 // ===== MIDDLEWARE DE SEGURIDAD =====
 
@@ -90,6 +90,8 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       database: dbConnected ? 'connected' : 'disconnected',
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development'
     });
   } catch (error) {
     logger.error('Health check failed:', error);
@@ -98,47 +100,46 @@ app.get('/health', async (req, res) => {
       service: 'student-service',
       status: 'unhealthy',
       error: 'Health check failed',
+      timestamp: new Date().toISOString()
     });
   }
 });
 
-// Métricas básicas
-app.get('/metrics', (req, res) => {
+// Root endpoint
+app.get('/', (req, res) => {
   res.json({
     success: true,
-    service: 'student-service',
-    metrics: {
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      cpu: process.cpuUsage(),
-      version: process.version,
-      platform: process.platform,
-    },
+    service: 'Student Service',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// API Routes
-app.use('/api/students', createLimiter, studentRoutes);
+// API routes
+app.use('/students', studentRoutes);
 
 // ===== MIDDLEWARE DE ERROR HANDLING =====
 
 // 404 handler
 app.use('*', (req, res) => {
+  logger.warn(`Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
-    error: 'Endpoint no encontrado',
+    error: 'Route not found',
     path: req.originalUrl,
+    method: req.method
   });
 });
 
-// Error handler global
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error:', error);
-  
+// Global error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('Unhandled error:', err);
   res.status(500).json({
     success: false,
-    error: 'Error interno del servidor',
-    message: process.env.NODE_ENV === 'development' ? error.message : 'Algo salió mal',
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
 });
 
@@ -147,62 +148,39 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 async function startServer() {
   try {
     // Verificar conexión a la base de datos
-    logger.info('🔍 Verificando conexión a la base de datos...');
     const dbConnected = await checkConnection();
-    
     if (!dbConnected) {
-      logger.error('❌ No se pudo conectar a la base de datos');
+      logger.error('Failed to connect to database');
       process.exit(1);
     }
     
-    logger.info('✅ Conexión a la base de datos establecida');
-
-    // Inicializar tablas
-    logger.info('🔍 Verificando tablas de la base de datos...');
-    const tablesInitialized = await initializeTables();
+    logger.info('Database connection established');
     
-    if (!tablesInitialized) {
-      logger.error('❌ Error al verificar las tablas de la base de datos');
-      process.exit(1);
-    }
+    // Inicializar tablas si es necesario
+    await initializeTables();
+    logger.info('Database tables initialized');
     
-    logger.info('✅ Tablas de la base de datos verificadas');
-
     // Iniciar servidor
     app.listen(PORT, () => {
-      logger.info(`🚀 Student Service iniciado en puerto ${PORT}`);
+      logger.info(`🚀 Student Service running on port ${PORT}`);
       logger.info(`📊 Health check: http://localhost:${PORT}/health`);
-      logger.info(`📈 Métricas: http://localhost:${PORT}/metrics`);
-      logger.info(`🔗 API: http://localhost:${PORT}/api/students`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
-
   } catch (error) {
-    logger.error('❌ Error al iniciar el servidor:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
 
 // ===== MANEJO DE SEÑALES =====
 
-process.on('SIGTERM', () => {
-  logger.info('🛑 SIGTERM recibido, cerrando servidor...');
+const gracefulShutdown = (signal: string) => {
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
   process.exit(0);
-});
+};
 
-process.on('SIGINT', () => {
-  logger.info('🛑 SIGINT recibido, cerrando servidor...');
-  process.exit(0);
-});
-
-process.on('uncaughtException', (error) => {
-  logger.error('❌ Excepción no capturada:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('❌ Promesa rechazada no manejada:', reason);
-  process.exit(1);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // ===== INICIAR SERVIDOR =====
 
