@@ -1,0 +1,286 @@
+groups:
+  - name: adeptify-alerts
+    rules:
+      # Service Health Alerts
+      - alert: ServiceDown
+        expr: up{job=~".*service.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: adeptify
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High error rate for {{ $labels.job }}"
+          description: "Error rate is {{ $value }} errors per second for {{ $labels.job }}"
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High response time for {{ $labels.job }}"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.job }}"
+
+      # Resource Usage Alerts
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{container!=""}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High CPU usage for {{ $labels.pod }}"
+          description: "CPU usage is {{ $value }}% for {{ $labels.pod }}"
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes{container!=""} / container_spec_memory_limit_bytes{container!=""}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High memory usage for {{ $labels.pod }}"
+          description: "Memory usage is {{ $value }}% for {{ $labels.pod }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          team: adeptify
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is {{ $value }}% available on {{ $labels.instance }}"
+
+      # Database Alerts
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends > 100
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High database connections"
+          description: "Database has {{ $value }} active connections"
+
+      - alert: DatabaseSlowQueries
+        expr: rate(pg_stat_activity_max_tx_duration{datname!=""}[5m]) > 30
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query duration is {{ $value }}s"
+
+      # Redis Alerts
+      - alert: RedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value }}%"
+
+      - alert: RedisConnectionsHigh
+        expr: redis_connected_clients > 1000
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High Redis connections"
+          description: "Redis has {{ $value }} connected clients"
+
+      # Security Alerts
+      - alert: SecurityThreatDetected
+        expr: increase(security_threats_detected_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+          team: adeptify
+        annotations:
+          summary: "Security threats detected"
+          description: "{{ $value }} security threats detected in the last 5 minutes"
+
+      - alert: AuthenticationFailures
+        expr: rate(authentication_failures_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} authentication failures per second"
+
+      - alert: AuthorizationFailures
+        expr: rate(authorization_failures_total[5m]) > 2
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High authorization failure rate"
+          description: "{{ $value }} authorization failures per second"
+
+      # Performance Alerts
+      - alert: LowPerformanceScore
+        expr: performance_score < 70
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Low performance score"
+          description: "Overall performance score is {{ $value }}%"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "High latency detected"
+          description: "99th percentile latency is {{ $value }}s"
+
+      # Network Alerts
+      - alert: NetworkErrors
+        expr: rate(network_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Network errors detected"
+          description: "{{ $value }} network errors per second"
+
+      # API Gateway Alerts
+      - alert: GatewayHighLoad
+        expr: rate(http_requests_total{job="api-gateway"}[5m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "API Gateway under high load"
+          description: "API Gateway handling {{ $value }} requests per second"
+
+      - alert: GatewayCircuitBreakerOpen
+        expr: circuit_breaker_state{job="api-gateway"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          team: adeptify
+        annotations:
+          summary: "Circuit breaker open for {{ $labels.service }}"
+          description: "Circuit breaker is open for service {{ $labels.service }}"
+
+      # LLM Service Alerts
+      - alert: LLMServiceHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="llm-gateway"}[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "LLM service high latency"
+          description: "LLM service 95th percentile latency is {{ $value }}s"
+
+      - alert: LLMServiceErrors
+        expr: rate(http_requests_total{job="llm-gateway",status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "LLM service errors"
+          description: "LLM service error rate is {{ $value }} errors per second"
+
+      # File Service Alerts
+      - alert: FileServiceStorageFull
+        expr: (file_storage_used_bytes / file_storage_total_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: adeptify
+        annotations:
+          summary: "File service storage nearly full"
+          description: "File service storage is {{ $value }}% full"
+
+      # Search Service Alerts
+      - alert: SearchServiceSlow
+        expr: histogram_quantile(0.95, rate(search_query_duration_seconds_bucket[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Search service slow queries"
+          description: "Search service 95th percentile query time is {{ $value }}s"
+
+      # Notification Service Alerts
+      - alert: NotificationQueueBacklog
+        expr: notification_queue_size > 1000
+        for: 2m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Notification queue backlog"
+          description: "Notification queue has {{ $value }} pending messages"
+
+      # Analytics Service Alerts
+      - alert: AnalyticsProcessingDelay
+        expr: analytics_processing_delay_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Analytics processing delay"
+          description: "Analytics processing is {{ $value }}s behind"
+
+      # Kubernetes Alerts
+      - alert: PodRestarting
+        expr: increase(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Pod {{ $labels.pod }} is restarting"
+          description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes"
+
+      - alert: NodeHighLoad
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Node {{ $labels.instance }} under high load"
+          description: "Node {{ $labels.instance }} CPU usage is {{ $value }}%"
+
+      - alert: NodeMemoryHigh
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          team: adeptify
+        annotations:
+          summary: "Node {{ $labels.instance }} high memory usage"
+          description: "Node {{ $labels.instance }} memory usage is {{ $value }}%"

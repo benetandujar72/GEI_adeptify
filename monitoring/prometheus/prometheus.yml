@@ -1,33 +1,353 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: 'adeptify-cluster'
+    environment: 'production'
 
 rule_files:
   - "rules/*.yml"
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
 scrape_configs:
-  - job_name: 'eduai-microservices'
+  # Prometheus itself
+  - job_name: 'prometheus'
     static_configs:
-      - targets: 
-        - 'user-service:3001'
-        - 'student-service:3002'
-        - 'course-service:3003'
-        - 'resource-service:3009'
-        - 'communication-service:3010'
-        - 'analytics-service:3011'
-        - 'llm-gateway:3006'
-        - 'content-generation:3007'
-        - 'chatbot:3008'
-        - 'predictive-analytics:3008'
-        - 'personalization-engine:3012'
-        - 'ml-pipeline:3013'
-    metrics_path: '/metrics'
+      - targets: ['localhost:9090']
+    metrics_path: /metrics
     scrape_interval: 10s
 
-  - job_name: 'eduai-infrastructure'
+  # API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+    scrape_timeout: 10s
+
+  # User Service
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Student Service
+  - job_name: 'student-service'
+    static_configs:
+      - targets: ['student-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Course Service
+  - job_name: 'course-service'
+    static_configs:
+      - targets: ['course-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Resource Service
+  - job_name: 'resource-service'
+    static_configs:
+      - targets: ['resource-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Communication Service
+  - job_name: 'communication-service'
+    static_configs:
+      - targets: ['communication-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Analytics Service
+  - job_name: 'analytics-service'
+    static_configs:
+      - targets: ['analytics-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # LLM Gateway
+  - job_name: 'llm-gateway'
+    static_configs:
+      - targets: ['llm-gateway:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Auth Service
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Notification Service
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # File Service
+  - job_name: 'file-service'
+    static_configs:
+      - targets: ['file-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Search Service
+  - job_name: 'search-service'
+    static_configs:
+      - targets: ['search-service:3000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Database (PostgreSQL)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Node Exporter (System metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Kubernetes API Server
+  - job_name: 'kubernetes-apiservers'
+    kubernetes_sd_configs:
+      - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecure_skip_verify: true
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+
+  # Kubernetes Nodes
+  - job_name: 'kubernetes-nodes'
+    kubernetes_sd_configs:
+      - role: node
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecure_skip_verify: true
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics
+
+  # Kubernetes Pods
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+
+  # Kubernetes Services
+  - job_name: 'kubernetes-service-endpoints'
+    kubernetes_sd_configs:
+      - role: endpoints
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+        action: replace
+        target_label: __scheme__
+        regex: (https?)
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        action: replace
+        target_label: kubernetes_name
+
+  # Blackbox Exporter (HTTP health checks)
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
     static_configs:
       - targets:
-        - 'postgres:5432'
-        - 'redis:6379'
-        - 'traefik:8080'
+        - https://gei.adeptify.es/health
+        - https://gei.adeptify.es/api/health
+        - https://gei.adeptify.es/api/users/health
+        - https://gei.adeptify.es/api/students/health
+        - https://gei.adeptify.es/api/courses/health
+        - https://gei.adeptify.es/api/resources/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Blackbox Exporter (TCP health checks)
+  - job_name: 'blackbox-tcp'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+        - postgres:5432
+        - redis:6379
+        - mongodb:27017
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # cAdvisor (Container metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metrics_path: /metrics
     scrape_interval: 30s
+
+  # Kube-state-metrics
+  - job_name: 'kube-state-metrics'
+    static_configs:
+      - targets: ['kube-state-metrics:8080']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Alertmanager
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Pushgateway
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Custom Application Metrics
+  - job_name: 'application-metrics'
+    static_configs:
+      - targets: ['application-metrics:8080']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Performance Metrics
+  - job_name: 'performance-metrics'
+    static_configs:
+      - targets: ['performance-metrics:8080']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    honor_labels: true
+
+  # Security Metrics
+  - job_name: 'security-metrics'
+    static_configs:
+      - targets: ['security-metrics:8080']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Database Performance Metrics
+  - job_name: 'database-performance'
+    static_configs:
+      - targets: ['database-performance:8080']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    honor_labels: true
+
+  # Network Performance Metrics
+  - job_name: 'network-performance'
+    static_configs:
+      - targets: ['network-performance:8080']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true
+
+  # Memory Performance Metrics
+  - job_name: 'memory-performance'
+    static_configs:
+      - targets: ['memory-performance:8080']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    honor_labels: true

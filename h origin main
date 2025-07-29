@@ -1,3 +1,0 @@
-[33md25875d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix: Corrige Dockerfile - asegura creación del directorio ui antes del archivo checkbox.tsx
-[33m13cf10a[m Fix: Resuelve errores de build completos - checkbox y dependencias del servidor
-[33m5312ecf[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: corregir import de useApi en Calendar.tsx y tests

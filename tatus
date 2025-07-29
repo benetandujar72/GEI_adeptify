@@ -1,5 +1,0 @@
-[33m5257b7e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m 🎉 MIGRACIÓN MCP COMPLETADA AL 100% - Implementación completa de arquitectura MCP con microservicios, AI services, CI/CD y configuración de producción
-[33md1be334[m 🎉 MIGRACIÓN MCP COMPLETADA AL 100% - Implementación completa de arquitectura MCP con microservicios, AI services, CI/CD y configuración de producción
-[33m83fec7b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: Add detailed logging and error handling to identify exact failure point in server initialization
-[33m6a78e30[m fix: Completely disable Google Sheets service and improve production startup to resolve deployment issues
-[33m11d400c[m fix: Change aliased imports to relative in dashboard routes and add mounting log to resolve 404 error

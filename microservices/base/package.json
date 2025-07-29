@@ -1,28 +1,86 @@
 {
-  "name": "@gei/microservice-base",
+  "name": "adeptify-microservices-base",
   "version": "1.0.0",
-  "private": true,
-  "type": "module",
+  "description": "Base package for Adeptify microservices with performance optimization",
+  "main": "index.js",
   "scripts": {
-    "dev": "NODE_ENV=development tsx index.ts",
-    "build": "node esbuild.config.js",
-    "start": "NODE_ENV=production node dist/index.js"
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "performance:test": "node scripts/performance-test.js",
+    "optimization:analyze": "node scripts/optimization-analyzer.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
+    "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
     "helmet": "^7.1.0",
-    "drizzle-orm": "^0.30.10",
-    "postgres": "^3.4.4"
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
+    "winston": "^3.11.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "mysql2": "^3.6.5",
+    "mongodb": "^6.3.0",
+    "redis": "^4.6.10",
+    "ioredis": "^5.3.2",
+    "zlib": "^1.0.5",
+    "gc-stats": "^1.4.0",
+    "node-cron": "^3.0.3",
+    "cluster": "^0.7.7",
+    "os": "^0.1.2",
+    "perf_hooks": "^1.0.0",
+    "events": "^3.3.0",
+    "http": "^0.0.1-security",
+    "https": "^1.0.0",
+    "url": "^0.11.3",
+    "buffer": "^6.0.3",
+    "stream": "^0.0.2",
+    "util": "^0.12.5"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
-    "@types/node": "^20.12.12",
-    "tsx": "^4.9.0",
-    "typescript": "^5.4.5",
-    "esbuild": "^0.20.2",
-    "drizzle-kit": "^0.20.17"
-  }
+    "@types/compression": "^1.7.5",
+    "@types/pg": "^8.10.9",
+    "@types/node": "^20.10.5",
+    "@types/gc-stats": "^1.4.4",
+    "@types/node-cron": "^3.0.11",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8",
+    "ts-jest": "^29.1.1",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "microservices",
+    "performance",
+    "optimization",
+    "monitoring",
+    "adeptify",
+    "education",
+    "ai"
+  ],
+  "author": "Adeptify Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adeptify/microservices-base.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adeptify/microservices-base/issues"
+  },
+  "homepage": "https://github.com/adeptify/microservices-base#readme"
 }
