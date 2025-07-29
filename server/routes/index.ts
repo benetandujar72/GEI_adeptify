@@ -1,29 +1,29 @@
 import { Router } from 'express';
-import authRoutes from './auth.js';
-import userRoutes from './users.js';
-import instituteRoutes from './institutes.js';
-import academicYearRoutes from './academic-years.js';
-import evaluationRoutes from './evaluation.js';
-import attendanceRoutes from './attendance.js';
-import guardRoutes from './guards.js';
-import surveyRoutes from './surveys.js';
-import resourceRoutes from './resources.js';
-import analyticsRoutes from './analytics.js';
-import aiRoutes from './ai.js';
-import adeptifyRoutes from './adeptify.js';
-import assistatutRoutes from './assistatut.js';
-import competencyRoutes from './competency.js';
-import guardAutomationRoutes from './guard-automation.js';
-import attendanceCoreRoutes from './attendance-core.js';
-import communicationRoutes from './communication.js';
-import scheduleRoutes from './schedule.js';
-import dashboardRoutes from './dashboard.js';
-// import googleSheetsRoutes from './google-sheets.js'; // COMPLETAMENTE DESHABILITADO
-import auditRoutes from './audit.js';
-import reportRoutes from './reports.js';
-import exportRoutes from './export.js';
-import optimizationRoutes from './optimization.js';
-import calendarRoutes from './calendar.js';
+import authRoutes from './auth';
+import userRoutes from './users';
+import instituteRoutes from './institutes';
+import academicYearRoutes from './academic-years';
+import evaluationRoutes from './evaluation';
+import attendanceRoutes from './attendance';
+import guardRoutes from './guards';
+import surveyRoutes from './surveys';
+import resourceRoutes from './resources';
+import analyticsRoutes from './analytics';
+import aiRoutes from './ai';
+import adeptifyRoutes from './adeptify';
+import assistatutRoutes from './assistatut';
+import competencyRoutes from './competency';
+import guardAutomationRoutes from './guard-automation';
+import attendanceCoreRoutes from './attendance-core';
+import communicationRoutes from './communication';
+import scheduleRoutes from './schedule';
+import dashboardRoutes from './dashboard';
+// import googleSheetsRoutes from './google-sheets'; // COMPLETAMENTE DESHABILITADO
+import auditRoutes from './audit';
+import reportRoutes from './reports';
+import exportRoutes from './export';
+import optimizationRoutes from './optimization';
+import calendarRoutes from './calendar';
 
 /**
  * Configura todas las rutas de la API

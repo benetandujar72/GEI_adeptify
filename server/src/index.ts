@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
-import { setupRoutes } from '../routes/index.js';
+import { setupRoutes } from '../routes/index';
 
 // Cargar variables de entorno
 dotenv.config();
