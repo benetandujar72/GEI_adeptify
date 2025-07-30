@@ -4,13 +4,12 @@ services:
     env: node
     plan: starter
     buildCommand: |
-      cd server
       npm ci
-      npm run build
+      npm run build:server
+      npm run build:client
     startCommand: |
-      cd server
-      chmod +x start.sh
-      ./start.sh
+      chmod +x scripts/start-render.sh
+      ./scripts/start-render.sh
     envVars:
       # Configuración del servidor
       - key: NODE_ENV
@@ -42,11 +41,23 @@ services:
       - key: SESSION_SECRET
         value: gei_adeptify_session_secret_2024_secure_key_123456789_abcdefghijklmnop
       
+      # JWT Secrets
+      - key: JWT_SECRET
+        value: gei_jwt_secret_2024_secure_key_123456789_abcdefghijklmnop
+      - key: JWT_REFRESH_SECRET
+        value: gei_jwt_refresh_secret_2024_secure_key_123456789_abcdefghijklmnop
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      
       # Google OAuth Configuration
       - key: GOOGLE_CLIENT_ID
         value: 1080986221149-kk92eavrakaci64feloqtne5p79inphp.apps.googleusercontent.com
       - key: GOOGLE_CLIENT_SECRET
         value: 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
+      - key: GOOGLE_CALLBACK_URL
+        value: https://gei.adeptify.es/auth/google/callback
+      - key: GOOGLE_REDIRECT_URI
+        value: https://gei.adeptify.es/auth/google/callback
       
       # Google Gemini AI API
       - key: GEMINI_API_KEY
@@ -57,13 +68,37 @@ services:
         value: info
       - key: CORS_ORIGIN
         value: https://gei.adeptify.es
+      - key: ALLOWED_ORIGINS
+        value: https://gei.adeptify.es,https://www.gei.adeptify.es
       - key: ENABLE_METRICS
+        value: true
+      - key: ENABLE_DEBUG_LOGS
+        value: false
+      - key: ENABLE_AUDIT_LOGS
+        value: true
+      
+      # URLs de producción
+      - key: PRODUCTION_URL
+        value: https://gei.adeptify.es
+      - key: API_BASE_URL
+        value: https://gei.adeptify.es/api
+      - key: CLIENT_BASE_URL
+        value: https://gei.adeptify.es
+      - key: FRONTEND_URL
+        value: https://gei.adeptify.es
+      
+      # Configuración de módulos
+      - key: ADEPTIFY_ENABLED
+        value: true
+      - key: ASSISTATUT_ENABLED
+        value: true
+      - key: ENABLE_CACHE
+        value: true
+      - key: ENABLE_RATE_LIMITING
         value: true
       
       # Variables opcionales (pueden configurarse manualmente en Render)
       - key: REDIS_URL
-        sync: false
-      - key: JWT_SECRET
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -77,9 +112,7 @@ services:
         sync: false
       - key: SMTP_PASS
         sync: false
-      - key: FRONTEND_URL
-        value: https://gei.adeptify.es
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     autoDeploy: true
 
 databases:
