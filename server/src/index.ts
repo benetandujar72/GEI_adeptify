@@ -2,11 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import dotenv from 'dotenv';
 import { setupRoutes } from '../routes/index';
 
-// Cargar variables de entorno
-dotenv.config();
+// NO usar dotenv - las variables vienen del sistema
+// dotenv.config(); // COMENTADO - usar variables del sistema
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,25 +37,53 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Ruta de health check
+// Ruta de health check mejorada
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    database: process.env.DATABASE_URL ? 'CONFIGURED' : 'NOT_CONFIGURED',
+    google: process.env.GOOGLE_CLIENT_ID ? 'CONFIGURED' : 'NOT_CONFIGURED',
+    session: process.env.SESSION_SECRET ? 'CONFIGURED' : 'NOT_CONFIGURED',
+    jwt: process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT_CONFIGURED'
+  });
+});
+
+// Ruta de información del sistema
+app.get('/api/system/info', (req, res) => {
+  res.json({
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    port: process.env.PORT || 3000,
+    database: {
+      configured: !!process.env.DATABASE_URL,
+      host: process.env.DB_HOST || 'NOT_SET'
+    },
+    auth: {
+      sessionConfigured: !!process.env.SESSION_SECRET,
+      jwtConfigured: !!process.env.JWT_SECRET,
+      googleConfigured: !!process.env.GOOGLE_CLIENT_ID
+    },
+    cors: {
+      origin: process.env.CORS_ORIGIN || 'https://gei.adeptify.es'
+    }
   });
 });
 
 // Configurar rutas de la API
 app.use('/api', setupRoutes());
 
-// Middleware de manejo de errores básico
+// Middleware de manejo de errores mejorado
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+  console.error('❌ Error del servidor:', err);
+  
   res.status(500).json({
     error: 'Error interno del servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Algo salió mal'
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Algo salió mal',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -65,16 +92,20 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Ruta no encontrada',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
+    timestamp: new Date().toISOString()
   });
 });
 
-// Iniciar servidor
+// Iniciar servidor con mejor logging
 app.listen(PORT, () => {
   console.log(`🚀 Servidor iniciado en puerto ${PORT}`);
-  console.log(`📊 Health check disponible en: http://localhost:${PORT}/health`);
-  console.log(`🔗 API disponible en: http://localhost:${PORT}/api`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔗 API: http://localhost:${PORT}/api`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🗄️ Base de datos: ${process.env.DATABASE_URL ? 'CONFIGURADA' : 'NO CONFIGURADA'}`);
+  console.log(`🔐 Autenticación: ${process.env.SESSION_SECRET ? 'CONFIGURADA' : 'NO CONFIGURADA'}`);
+  console.log(`🔑 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'CONFIGURADO' : 'NO CONFIGURADO'}`);
 });
 
 // Manejo de señales para cierre graceful
@@ -98,5 +129,3 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Promesa rechazada no manejada:', reason);
   process.exit(1);
 });
-
-export default app; 
