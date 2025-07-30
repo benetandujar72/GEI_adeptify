@@ -227,6 +227,433 @@ try {
       });
     }
   });
+
+  // ========================================
+  // ENDPOINTS EDUCATIVOS
+  // ========================================
+
+  // 1. ENDPOINTS DE CURSOS
+  app.get('/api/courses', async (req, res) => {
+    try {
+      if (!sql) {
+        return res.status(500).json({ error: 'Base de datos no disponible' });
+      }
+
+      const courses = await sql`
+        SELECT c.*, i.name as institute_name
+        FROM courses c
+        LEFT JOIN institutes i ON c.institute_id = i.id
+        WHERE c.is_active = true
+        ORDER BY c.name
+      `;
+
+      res.json({ courses });
+    } catch (error) {
+      console.error('❌ Error obteniendo cursos:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  app.post('/api/courses', async (req, res) => {
+    try {
+      const { name, code, description, academic_year, semester, credits, institute_id } = req.body;
+      
+      if (!name || !code || !academic_year || !institute_id) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+      }
+
+      const newCourse = await sql`
+        INSERT INTO courses (name, code, description, academic_year, semester, credits, institute_id)
+        VALUES (${name}, ${code}, ${description}, ${academic_year}, ${semester || 1}, ${credits || 0}, ${institute_id})
+        RETURNING *
+      `;
+
+      res.status(201).json({ course: newCourse[0] });
+    } catch (error) {
+      console.error('❌ Error creando curso:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // 2. ENDPOINTS DE COMPETENCIAS
+  app.get('/api/competencies', async (req, res) => {
+    try {
+      if (!sql) {
+        return res.status(500).json({ error: 'Base de datos no disponible' });
+      }
+
+      const { course_id } = req.query;
+      let query = sql`
+        SELECT c.*, co.name as course_name
+        FROM competencies c
+        LEFT JOIN courses co ON c.course_id = co.id
+        WHERE c.is_active = true
+      `;
+
+      if (course_id) {
+        query = sql`
+          SELECT c.*, co.name as course_name
+          FROM competencies c
+          LEFT JOIN courses co ON c.course_id = co.id
+          WHERE c.is_active = true AND c.course_id = ${course_id}
+        `;
+      }
+
+      query = sql`${query} ORDER BY c.name`;
+      const competencies = await query;
+
+      res.json({ competencies });
+    } catch (error) {
+      console.error('❌ Error obteniendo competencias:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  app.post('/api/competencies', async (req, res) => {
+    try {
+      const { name, code, description, level, weight, course_id } = req.body;
+      
+      if (!name || !code || !course_id) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+      }
+
+      const newCompetency = await sql`
+        INSERT INTO competencies (name, code, description, level, weight, course_id)
+        VALUES (${name}, ${code}, ${description}, ${level || 'básico'}, ${weight || 1.00}, ${course_id})
+        RETURNING *
+      `;
+
+      res.status(201).json({ competency: newCompetency[0] });
+    } catch (error) {
+      console.error('❌ Error creando competencia:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // 3. ENDPOINTS DE CRITERIOS
+  app.get('/api/criteria', async (req, res) => {
+    try {
+      if (!sql) {
+        return res.status(500).json({ error: 'Base de datos no disponible' });
+      }
+
+      const { competency_id } = req.query;
+      let query = sql`
+        SELECT c.*, comp.name as competency_name
+        FROM criteria c
+        LEFT JOIN competencies comp ON c.competency_id = comp.id
+        WHERE c.is_active = true
+      `;
+
+      if (competency_id) {
+        query = sql`
+          SELECT c.*, comp.name as competency_name
+          FROM criteria c
+          LEFT JOIN competencies comp ON c.competency_id = comp.id
+          WHERE c.is_active = true AND c.competency_id = ${competency_id}
+        `;
+      }
+
+      query = sql`${query} ORDER BY c.name`;
+      const criteria = await query;
+
+      res.json({ criteria });
+    } catch (error) {
+      console.error('❌ Error obteniendo criterios:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  app.post('/api/criteria', async (req, res) => {
+    try {
+      const { name, description, max_score, weight, competency_id } = req.body;
+      
+      if (!name || !competency_id) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+      }
+
+      const newCriterion = await sql`
+        INSERT INTO criteria (name, description, max_score, weight, competency_id)
+        VALUES (${name}, ${description}, ${max_score || 10.00}, ${weight || 1.00}, ${competency_id})
+        RETURNING *
+      `;
+
+      res.status(201).json({ criterion: newCriterion[0] });
+    } catch (error) {
+      console.error('❌ Error creando criterio:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // 4. ENDPOINTS DE EVALUACIONES
+  app.get('/api/evaluations', async (req, res) => {
+    try {
+      if (!sql) {
+        return res.status(500).json({ error: 'Base de datos no disponible' });
+      }
+
+      const { course_id } = req.query;
+      let query = sql`
+        SELECT e.*, c.name as course_name, u.display_name as created_by_name
+        FROM evaluations e
+        LEFT JOIN courses c ON e.course_id = c.id
+        LEFT JOIN users u ON e.created_by = u.id
+        WHERE e.is_active = true
+      `;
+
+      if (course_id) {
+        query = sql`
+          SELECT e.*, c.name as course_name, u.display_name as created_by_name
+          FROM evaluations e
+          LEFT JOIN courses c ON e.course_id = c.id
+          LEFT JOIN users u ON e.created_by = u.id
+          WHERE e.is_active = true AND e.course_id = ${course_id}
+        `;
+      }
+
+      query = sql`${query} ORDER BY e.date DESC`;
+      const evaluations = await query;
+
+      res.json({ evaluations });
+    } catch (error) {
+      console.error('❌ Error obteniendo evaluaciones:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  app.post('/api/evaluations', async (req, res) => {
+    try {
+      const { name, description, type, date, max_score, weight, course_id, created_by } = req.body;
+      
+      if (!name || !type || !date || !course_id || !created_by) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+      }
+
+      const newEvaluation = await sql`
+        INSERT INTO evaluations (name, description, type, date, max_score, weight, course_id, created_by)
+        VALUES (${name}, ${description}, ${type}, ${date}, ${max_score || 10.00}, ${weight || 1.00}, ${course_id}, ${created_by})
+        RETURNING *
+      `;
+
+      res.status(201).json({ evaluation: newEvaluation[0] });
+    } catch (error) {
+      console.error('❌ Error creando evaluación:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // 5. ENDPOINTS DE CALIFICACIONES
+  app.get('/api/grades', async (req, res) => {
+    try {
+      if (!sql) {
+        return res.status(500).json({ error: 'Base de datos no disponible' });
+      }
+
+      const { student_id, evaluation_id } = req.query;
+      let query = sql`
+        SELECT g.*, 
+               s.display_name as student_name,
+               e.name as evaluation_name,
+               c.name as criterion_name,
+               u.display_name as graded_by_name
+        FROM grades g
+        LEFT JOIN users s ON g.student_id = s.id
+        LEFT JOIN evaluations e ON g.evaluation_id = e.id
+        LEFT JOIN criteria c ON g.criterion_id = c.id
+        LEFT JOIN users u ON g.graded_by = u.id
+      `;
+
+      if (student_id) {
+        query = sql`${query} WHERE g.student_id = ${student_id}`;
+      } else if (evaluation_id) {
+        query = sql`${query} WHERE g.evaluation_id = ${evaluation_id}`;
+      }
+
+      query = sql`${query} ORDER BY g.graded_at DESC`;
+      const grades = await query;
+
+      res.json({ grades });
+    } catch (error) {
+      console.error('❌ Error obteniendo calificaciones:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  app.post('/api/grades', async (req, res) => {
+    try {
+      const { student_id, evaluation_id, criterion_id, score, comments, graded_by } = req.body;
+      
+      if (!student_id || !evaluation_id || !criterion_id || !score || !graded_by) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+      }
+
+      const newGrade = await sql`
+        INSERT INTO grades (student_id, evaluation_id, criterion_id, score, comments, graded_by)
+        VALUES (${student_id}, ${evaluation_id}, ${criterion_id}, ${score}, ${comments}, ${graded_by})
+        ON CONFLICT (student_id, evaluation_id, criterion_id) 
+        DO UPDATE SET 
+          score = EXCLUDED.score,
+          comments = EXCLUDED.comments,
+          graded_by = EXCLUDED.graded_by,
+          graded_at = NOW(),
+          updated_at = NOW()
+        RETURNING *
+      `;
+
+      res.status(201).json({ grade: newGrade[0] });
+    } catch (error) {
+      console.error('❌ Error creando calificación:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // 6. ENDPOINTS DE ASISTENCIA
+  app.get('/api/attendance', async (req, res) => {
+    try {
+      if (!sql) {
+        return res.status(500).json({ error: 'Base de datos no disponible' });
+      }
+
+      const { student_id, course_id, date } = req.query;
+      let query = sql`
+        SELECT a.*, 
+               s.display_name as student_name,
+               c.name as course_name,
+               u.display_name as recorded_by_name
+        FROM attendance a
+        LEFT JOIN users s ON a.student_id = s.id
+        LEFT JOIN courses c ON a.course_id = c.id
+        LEFT JOIN users u ON a.recorded_by = u.id
+      `;
+
+      if (student_id) {
+        query = sql`${query} WHERE a.student_id = ${student_id}`;
+      } else if (course_id) {
+        query = sql`${query} WHERE a.course_id = ${course_id}`;
+      } else if (date) {
+        query = sql`${query} WHERE a.date = ${date}`;
+      }
+
+      query = sql`${query} ORDER BY a.date DESC`;
+      const attendance = await query;
+
+      res.json({ attendance });
+    } catch (error) {
+      console.error('❌ Error obteniendo asistencia:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  app.post('/api/attendance', async (req, res) => {
+    try {
+      const { student_id, course_id, date, status, comments, recorded_by } = req.body;
+      
+      if (!student_id || !course_id || !date || !status || !recorded_by) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+      }
+
+      const newAttendance = await sql`
+        INSERT INTO attendance (student_id, course_id, date, status, comments, recorded_by)
+        VALUES (${student_id}, ${course_id}, ${date}, ${status}, ${comments}, ${recorded_by})
+        ON CONFLICT (student_id, course_id, date) 
+        DO UPDATE SET 
+          status = EXCLUDED.status,
+          comments = EXCLUDED.comments,
+          recorded_by = EXCLUDED.recorded_by,
+          updated_at = NOW()
+        RETURNING *
+      `;
+
+      res.status(201).json({ attendance: newAttendance[0] });
+    } catch (error) {
+      console.error('❌ Error creando asistencia:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // 7. ENDPOINTS DE ESTADÍSTICAS
+  app.get('/api/statistics', async (req, res) => {
+    try {
+      if (!sql) {
+        return res.status(500).json({ error: 'Base de datos no disponible' });
+      }
+
+      const { course_id, student_id } = req.query;
+
+      // Estadísticas generales
+      const totalCourses = await sql`SELECT COUNT(*) as count FROM courses WHERE is_active = true`;
+      const totalStudents = await sql`SELECT COUNT(*) as count FROM users WHERE role = 'student' AND is_active = true`;
+      const totalTeachers = await sql`SELECT COUNT(*) as count FROM users WHERE role = 'teacher' AND is_active = true`;
+
+      // Estadísticas de calificaciones
+      const gradeStats = await sql`
+        SELECT 
+          AVG(score) as average_score,
+          MIN(score) as min_score,
+          MAX(score) as max_score,
+          COUNT(*) as total_grades
+        FROM grades
+      `;
+
+      // Estadísticas de asistencia
+      const attendanceStats = await sql`
+        SELECT 
+          status,
+          COUNT(*) as count
+        FROM attendance
+        GROUP BY status
+      `;
+
+      let courseStats = null;
+      if (course_id) {
+        courseStats = await sql`
+          SELECT 
+            c.name as course_name,
+            COUNT(DISTINCT e.id) as total_evaluations,
+            COUNT(DISTINCT en.student_id) as total_students,
+            AVG(g.score) as average_grade
+          FROM courses c
+          LEFT JOIN evaluations e ON c.id = e.course_id
+          LEFT JOIN enrollments en ON c.id = en.course_id
+          LEFT JOIN grades g ON e.id = g.evaluation_id
+          WHERE c.id = ${course_id}
+          GROUP BY c.id, c.name
+        `;
+      }
+
+      let studentStats = null;
+      if (student_id) {
+        studentStats = await sql`
+          SELECT 
+            u.display_name as student_name,
+            COUNT(DISTINCT g.evaluation_id) as total_evaluations,
+            AVG(g.score) as average_grade,
+            COUNT(CASE WHEN a.status = 'presente' THEN 1 END) as present_days,
+            COUNT(CASE WHEN a.status = 'ausente' THEN 1 END) as absent_days
+          FROM users u
+          LEFT JOIN grades g ON u.id = g.student_id
+          LEFT JOIN attendance a ON u.id = a.student_id
+          WHERE u.id = ${student_id}
+          GROUP BY u.id, u.display_name
+        `;
+      }
+
+      res.json({
+        general: {
+          totalCourses: totalCourses[0]?.count || 0,
+          totalStudents: totalStudents[0]?.count || 0,
+          totalTeachers: totalTeachers[0]?.count || 0
+        },
+        grades: gradeStats[0] || {},
+        attendance: attendanceStats,
+        course: courseStats?.[0] || null,
+        student: studentStats?.[0] || null
+      });
+    } catch (error) {
+      console.error('❌ Error obteniendo estadísticas:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
   
   // Ruta para servir la aplicación React
   app.get('*', (req, res) => {

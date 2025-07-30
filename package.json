@@ -32,6 +32,7 @@
     "test:login": "node scripts/test-login.js",
     "db:create-educational": "node scripts/create-educational-tables.js",
     "db:fix-educational": "node scripts/fix-educational-tables.js",
+    "db:populate-educational": "node scripts/populate-educational-data.js",
     "check": "tsc",
     "fix:deps": "node scripts/fix-dependencies.js",
     "verify:setup": "npm run fix:deps && npm run check",
