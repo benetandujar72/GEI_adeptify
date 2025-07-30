@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Script para probar el inicio del servidor
+// Script para iniciar la aplicación en Windows
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -12,8 +12,8 @@ const __dirname = dirname(__filename);
 // Cargar variables de entorno
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
-console.log('🧪 PROBANDO INICIO DEL SERVIDOR');
-console.log('================================');
+console.log('🚀 INICIANDO APLICACIÓN EN WINDOWS');
+console.log('==================================');
 
 // Configurar variables de entorno
 process.env.NODE_ENV = 'production';
@@ -36,23 +36,10 @@ if (!existsSync(distPath)) {
 console.log('\n✅ Archivo dist/index.js encontrado');
 console.log('🔌 Iniciando servidor...\n');
 
-// Iniciar el servidor con captura de errores
+// Iniciar el servidor
 const server = spawn('node', [distPath], {
-  stdio: ['inherit', 'pipe', 'pipe'],
+  stdio: 'inherit',
   env: process.env
-});
-
-let stdout = '';
-let stderr = '';
-
-server.stdout.on('data', (data) => {
-  stdout += data.toString();
-  console.log('📤 STDOUT:', data.toString());
-});
-
-server.stderr.on('data', (data) => {
-  stderr += data.toString();
-  console.log('📤 STDERR:', data.toString());
 });
 
 server.on('error', (error) => {
@@ -61,22 +48,10 @@ server.on('error', (error) => {
 });
 
 server.on('close', (code) => {
-  console.log(`\n📊 El servidor se cerró con código ${code}`);
-  
   if (code !== 0) {
-    console.log('\n❌ ERRORES DETECTADOS:');
-    console.log('======================');
-    if (stderr) {
-      console.log('STDERR:', stderr);
-    }
-    if (stdout) {
-      console.log('STDOUT:', stdout);
-    }
-  } else {
-    console.log('✅ Servidor iniciado correctamente');
+    console.error(`❌ El servidor se cerró con código ${code}`);
+    process.exit(code);
   }
-  
-  process.exit(code);
 });
 
 // Manejar señales de terminación
