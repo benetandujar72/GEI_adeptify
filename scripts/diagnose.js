@@ -130,7 +130,12 @@ async function diagnoseSystem() {
 
     if (process.env.DATABASE_URL) {
       try {
-        const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+        const sql = postgres(process.env.DATABASE_URL, { 
+          max: 1,
+          ssl: {
+            rejectUnauthorized: false
+          }
+        });
         await sql`SELECT 1 as test`;
         console.log('✅ Conexión a base de datos exitosa');
         successes.push('Conexión a base de datos establecida');
