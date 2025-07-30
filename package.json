@@ -28,6 +28,7 @@
     "start:prod": "node scripts/start-production.js",
     "start:render": "node scripts/start-render.js",
     "verify:render": "node scripts/verify-render-deployment.js",
+    "create:admin": "node scripts/create-admin-user.js",
     "check": "tsc",
     "fix:deps": "node scripts/fix-dependencies.js",
     "verify:setup": "npm run fix:deps && npm run check",
