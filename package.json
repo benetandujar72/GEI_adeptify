@@ -25,6 +25,7 @@
     "start:win": "node scripts/start-windows.js",
     "test:server": "node scripts/test-server-start.js",
     "test:minimal": "node scripts/test-minimal-server.js",
+    "start:prod": "node scripts/start-production.js",
     "check": "tsc",
     "fix:deps": "node scripts/fix-dependencies.js",
     "verify:setup": "npm run fix:deps && npm run check",
