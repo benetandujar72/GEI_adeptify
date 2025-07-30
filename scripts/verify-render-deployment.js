@@ -1,147 +1,241 @@
 #!/usr/bin/env node
 
-/**
- * Script para verificar la configuración de despliegue en Render
- */
-
-import fs from 'fs';
-import path from 'path';
+// Script para verificar el despliegue en Render
+import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-function verifyRenderConfig() {
-  console.log('🔍 Verificando configuración para Render.com...\n');
+// Cargar variables de entorno
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
-  // Verificar render.yaml
-  const renderPath = path.join(process.cwd(), 'render.yaml');
-  if (!fs.existsSync(renderPath)) {
-    console.error('❌ render.yaml no encontrado');
-    return false;
-  }
+console.log('🔍 VERIFICANDO DESPLIEGUE EN RENDER');
+console.log('===================================');
 
-  const renderContent = fs.readFileSync(renderPath, 'utf8');
-  console.log('✅ render.yaml encontrado');
+const issues = [];
+const warnings = [];
+const successes = [];
 
-  // Verificar elementos críticos en render.yaml
-  const checks = [
-    { name: 'Build command', pattern: /buildCommand:/, required: true },
-    { name: 'Start command', pattern: /startCommand:/, required: true },
-    { name: 'Health check path', pattern: /healthCheckPath:/, required: true },
-    { name: 'Environment variables', pattern: /envVars:/, required: true },
-    { name: 'DATABASE_URL', pattern: /DATABASE_URL/, required: true },
-    { name: 'SESSION_SECRET', pattern: /SESSION_SECRET/, required: true },
-    { name: 'JWT_SECRET', pattern: /JWT_SECRET/, required: true },
-    { name: 'NODE_ENV', pattern: /NODE_ENV.*production/, required: true },
-    { name: 'PORT', pattern: /PORT.*3000/, required: true }
+try {
+  // 1. Verificar archivos críticos para Render
+  console.log('\n📁 VERIFICANDO ARCHIVOS CRÍTICOS PARA RENDER');
+  console.log('=============================================');
+
+  const criticalFiles = [
+    'package.json',
+    'scripts/start-render.js',
+    'dist/index.js',
+    'dist/client/index.html'
   ];
 
-  let allPassed = true;
-  checks.forEach(check => {
-    if (check.required && !check.pattern.test(renderContent)) {
-      console.error(`  ❌ ${check.name} no encontrado o incorrecto`);
-      allPassed = false;
+  for (const file of criticalFiles) {
+    const fullPath = join(__dirname, '..', file);
+    if (existsSync(fullPath)) {
+      console.log(`✅ ${file}`);
+      successes.push(`Archivo ${file} presente`);
     } else {
-      console.log(`  ✅ ${check.name} configurado`);
+      console.log(`❌ ${file} - FALTANTE`);
+      issues.push(`Archivo crítico ${file} no encontrado`);
     }
-  });
-
-  // Verificar script de inicio
-  const startScriptPath = path.join(process.cwd(), 'scripts/start-render.sh');
-  if (!fs.existsSync(startScriptPath)) {
-    console.error('❌ scripts/start-render.sh no encontrado');
-    allPassed = false;
-  } else {
-    console.log('✅ scripts/start-render.sh encontrado');
   }
 
-  // Verificar package.json scripts
-  const packagePath = path.join(process.cwd(), 'package.json');
-  if (fs.existsSync(packagePath)) {
-    const packageContent = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-    const scripts = packageContent.scripts || {};
+  // 2. Verificar package.json
+  console.log('\n📦 VERIFICANDO PACKAGE.JSON');
+  console.log('============================');
+
+  try {
+    const packageJson = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
     
-    if (!scripts['build:server']) {
-      console.error('❌ Script build:server no encontrado en package.json');
-      allPassed = false;
+    // Verificar script de inicio
+    if (packageJson.scripts && packageJson.scripts.start) {
+      console.log(`✅ start: ${packageJson.scripts.start}`);
+      successes.push('Script start configurado');
     } else {
-      console.log('✅ Script build:server encontrado');
+      console.log(`❌ start - FALTANTE en scripts`);
+      issues.push('Script start no configurado en package.json');
     }
 
-    if (!scripts['build:client']) {
-      console.error('❌ Script build:client no encontrado en package.json');
-      allPassed = false;
-    } else {
-      console.log('✅ Script build:client encontrado');
+    // Verificar dependencias críticas
+    const criticalDeps = [
+      'express',
+      'cors',
+      'helmet',
+      'compression'
+    ];
+
+    for (const dep of criticalDeps) {
+      if (packageJson.dependencies && packageJson.dependencies[dep]) {
+        console.log(`✅ ${dep}: ${packageJson.dependencies[dep]}`);
+        successes.push(`Dependencia ${dep} instalada`);
+      } else {
+        console.log(`❌ ${dep} - FALTANTE en dependencies`);
+        issues.push(`Dependencia ${dep} no instalada`);
+      }
     }
+
+  } catch (error) {
+    console.log(`❌ Error leyendo package.json: ${error.message}`);
+    issues.push(`Error al leer package.json: ${error.message}`);
   }
 
-  // Verificar archivo de build
-  const distPath = path.join(process.cwd(), 'dist');
-  if (!fs.existsSync(distPath)) {
-    console.warn('⚠️  Directorio dist no encontrado (se creará durante el build)');
-  } else {
-    console.log('✅ Directorio dist encontrado');
-  }
+  // 3. Verificar variables de entorno
+  console.log('\n🔧 VERIFICANDO VARIABLES DE ENTORNO');
+  console.log('===================================');
 
-  // Verificar variables de entorno críticas
-  console.log('\n🔧 Variables de entorno críticas en render.yaml:');
-  const criticalVars = [
+  const requiredEnvVars = [
     'DATABASE_URL',
     'NODE_ENV',
-    'PORT',
-    'SESSION_SECRET',
-    'JWT_SECRET',
-    'CORS_ORIGIN',
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET',
-    'GEMINI_API_KEY'
+    'PORT'
   ];
 
-  criticalVars.forEach(varName => {
-    if (renderContent.includes(varName)) {
-      console.log(`  ✅ ${varName} configurada`);
+  for (const envVar of requiredEnvVars) {
+    if (process.env[envVar]) {
+      console.log(`✅ ${envVar}: ${envVar === 'DATABASE_URL' ? '***configurada***' : process.env[envVar]}`);
+      successes.push(`Variable de entorno ${envVar} configurada`);
     } else {
-      console.error(`  ❌ ${varName} no configurada`);
-      allPassed = false;
+      console.log(`⚠️ ${envVar} - NO CONFIGURADA (se configurará en Render)`);
+      warnings.push(`Variable de entorno ${envVar} no configurada localmente`);
     }
-  });
-
-  return allPassed;
-}
-
-function showRenderInstructions() {
-  console.log('\n📋 Instrucciones para despliegue en Render:');
-  console.log('1. Ve a https://render.com');
-  console.log('2. Crea un nuevo Web Service');
-  console.log('3. Conecta tu repositorio de GitHub');
-  console.log('4. Configura las variables de entorno:');
-  console.log('   - DATABASE_URL');
-  console.log('   - SESSION_SECRET');
-  console.log('   - JWT_SECRET');
-  console.log('   - GOOGLE_CLIENT_ID');
-  console.log('   - GOOGLE_CLIENT_SECRET');
-  console.log('   - GEMINI_API_KEY');
-  console.log('5. Configura el Build Command: npm run build:server && npm run build:client');
-  console.log('6. Configura el Start Command: ./scripts/start-render.sh');
-  console.log('7. Configura el Health Check Path: /health');
-}
-
-function main() {
-  const isValid = verifyRenderConfig();
-  
-  console.log('\n📊 Resumen de verificación:');
-  if (isValid) {
-    console.log('✅ Configuración para Render.com válida');
-    console.log('🚀 Listo para despliegue');
-  } else {
-    console.log('❌ Se encontraron problemas en la configuración');
-    console.log('💡 Revisa los errores anteriores');
   }
 
-  showRenderInstructions();
-}
+  // 4. Verificar directorios de build
+  console.log('\n🏗️ VERIFICANDO DIRECTORIOS DE BUILD');
+  console.log('===================================');
 
-// Ejecutar si es el archivo principal
-main(); 
+  const buildDirs = [
+    'dist',
+    'dist/client',
+    'node_modules'
+  ];
+
+  for (const dir of buildDirs) {
+    const fullPath = join(__dirname, '..', dir);
+    if (existsSync(fullPath)) {
+      console.log(`✅ ${dir}/ (directorio presente)`);
+      successes.push(`Directorio ${dir} presente`);
+    } else {
+      console.log(`⚠️ ${dir}/ - NO ENCONTRADO`);
+      warnings.push(`Directorio ${dir} no encontrado`);
+    }
+  }
+
+  // 5. Verificar archivos de configuración específicos
+  console.log('\n⚙️ VERIFICANDO CONFIGURACIONES ESPECÍFICAS');
+  console.log('==========================================');
+
+  const configFiles = [
+    'render.yaml',
+    'scripts/start-render.js',
+    'scripts/start-production.js'
+  ];
+
+  for (const file of configFiles) {
+    const fullPath = join(__dirname, '..', file);
+    if (existsSync(fullPath)) {
+      console.log(`✅ ${file}`);
+      successes.push(`Archivo de configuración ${file} presente`);
+    } else {
+      console.log(`⚠️ ${file} - NO ENCONTRADO`);
+      warnings.push(`Archivo de configuración ${file} no encontrado`);
+    }
+  }
+
+  // 6. Verificar configuración de Render
+  console.log('\n🌐 VERIFICANDO CONFIGURACIÓN DE RENDER');
+  console.log('======================================');
+
+  const renderFiles = [
+    'render.yaml',
+    'scripts/start-render.js'
+  ];
+
+  let renderConfigOk = true;
+  for (const file of renderFiles) {
+    const fullPath = join(__dirname, '..', file);
+    if (!existsSync(fullPath)) {
+      renderConfigOk = false;
+      break;
+    }
+  }
+
+  if (renderConfigOk) {
+    console.log('✅ Configuración de Render completa');
+    successes.push('Configuración de Render completa');
+  } else {
+    console.log('⚠️ Configuración de Render incompleta');
+    warnings.push('Configuración de Render incompleta');
+  }
+
+  // 7. Resumen del diagnóstico
+  console.log('\n🎯 RESUMEN DE VERIFICACIÓN PARA RENDER');
+  console.log('======================================');
+
+  console.log(`✅ Éxitos: ${successes.length}`);
+  console.log(`⚠️ Advertencias: ${warnings.length}`);
+  console.log(`❌ Problemas: ${issues.length}`);
+
+  if (issues.length === 0) {
+    console.log('\n🎉 DESPLIEGUE LISTO PARA RENDER');
+    console.log('===============================');
+    console.log('✅ Todos los componentes están listos para Render');
+    console.log('🚀 El proyecto está listo para despliegue');
+  } else {
+    console.log('\n❌ PROBLEMAS DETECTADOS');
+    console.log('======================');
+    console.log('❌ Se encontraron problemas que deben resolverse');
+    console.log('💡 Revisa las recomendaciones a continuación');
+  }
+
+  // Mostrar problemas
+  if (issues.length > 0) {
+    console.log('\n🔧 PROBLEMAS A RESOLVER:');
+    console.log('========================');
+    issues.forEach((issue, index) => {
+      console.log(`${index + 1}. ${issue}`);
+    });
+  }
+
+  // Mostrar advertencias
+  if (warnings.length > 0) {
+    console.log('\n⚠️ ADVERTENCIAS:');
+    console.log('===============');
+    warnings.forEach((warning, index) => {
+      console.log(`${index + 1}. ${warning}`);
+    });
+  }
+
+  // Recomendaciones
+  console.log('\n💡 RECOMENDACIONES PARA RENDER:');
+  console.log('===============================');
+  
+  if (issues.length > 0) {
+    console.log('1. Resuelve los problemas críticos antes del despliegue');
+    console.log('2. Verifica que todos los archivos estén en el repositorio');
+    console.log('3. Asegúrate de que el build funcione correctamente');
+  }
+  
+  console.log('4. Configura las variables de entorno en Render');
+  console.log('5. Verifica que el puerto esté configurado correctamente');
+  console.log('6. Asegúrate de que DATABASE_URL esté configurada en Render');
+  console.log('7. Verifica los logs de Render después del despliegue');
+
+  // Código de salida
+  const exitCode = issues.length > 0 ? 1 : 0;
+  
+  if (exitCode === 0) {
+    console.log('\n✅ Verificación completada exitosamente');
+  } else {
+    console.log('\n❌ Verificación completada con problemas');
+  }
+
+  process.exit(exitCode);
+
+} catch (error) {
+  console.error('\n❌ ERROR EN LA VERIFICACIÓN:');
+  console.error('============================');
+  console.error(error.message);
+  process.exit(1);
+} 
