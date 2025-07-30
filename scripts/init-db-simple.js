@@ -1,304 +1,261 @@
 #!/usr/bin/env node
 
-// Script de inicialización simple sin dependencias del schema
+// Script para inicializar la base de datos con datos básicos
+import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { config } from 'dotenv';
-import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Cargar variables de entorno
-config();
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
-console.log('🗄️ Inicializando base de datos con datos de prueba...');
-console.log('==================================================');
+console.log('🚀 INICIALIZANDO BASE DE DATOS CON DATOS BÁSICOS');
+console.log('==============================================');
 
-// Configuración de base de datos
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error('❌ Error: DATABASE_URL no configurada');
-  process.exit(1);
-}
-
-const sql = postgres(databaseUrl, {
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: false
-  } : false,
-  max: 1
-});
-
-async function initializeDatabaseSimple() {
+async function initDatabase() {
   try {
-    console.log('🔍 Verificando conexión a base de datos...');
-    
-    // Verificar conexión
-    await sql`SELECT 1`;
-    console.log('✅ Conexión a base de datos establecida');
-
-    // Verificar si ya existen datos
-    const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
-    if (existingUsers[0].count > 0) {
-      console.log('⚠️ Ya existen datos en la base de datos');
-      console.log('💡 Para reinicializar, elimina los datos existentes primero');
-      return;
+    // Verificar variables de entorno
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL no está definida en las variables de entorno');
     }
 
-    console.log('📊 Creando datos de prueba...');
-
-    // 1. Crear instituto de prueba
-    console.log('🏫 Creando instituto de prueba...');
-    const [institute] = await sql`
-      INSERT INTO institutes (name, code, address, phone, email, website, settings)
-      VALUES (
-        'Institut de Prova GEI',
-        'GEI001',
-        'Carrer de Prova, 123, Barcelona',
-        '+34 93 123 45 67',
-        'info@gei-prova.es',
-        'https://gei-prova.es',
-        '{"theme": "default", "language": "ca", "timezone": "Europe/Madrid"}'
-      )
-      RETURNING *
-    `;
-
-    console.log(`✅ Instituto creado: ${institute.name} (${institute.code})`);
-
-    // 2. Crear año académico
-    console.log('📅 Creando año académico...');
-    const [academicYear] = await sql`
-      INSERT INTO academic_years (institute_id, name, start_date, end_date, status, settings)
-      VALUES (
-        ${institute.id},
-        '2024-2025',
-        '2024-09-01',
-        '2025-06-30',
-        'active',
-        '{"evaluationPeriods": [{"name": "Primer Trimestre", "start": "2024-09-01", "end": "2024-12-20"}, {"name": "Segon Trimestre", "start": "2025-01-08", "end": "2025-03-28"}, {"name": "Tercer Trimestre", "start": "2025-04-07", "end": "2025-06-20"}]}'
-      )
-      RETURNING *
-    `;
-
-    console.log(`✅ Año académico creado: ${academicYear.name}`);
-
-    // 3. Crear módulos
-    console.log('📚 Creando módulos...');
-    const modulesData = [
-      { name: 'Gestió d\'Avaluacions', display_name: 'Gestió d\'Avaluacions', description: 'Mòdul per gestionar avaluacions i notes' },
-      { name: 'Control d\'Assistència', display_name: 'Control d\'Assistència', description: 'Mòdul per controlar l\'assistència dels alumnes' },
-      { name: 'Gestió de Guàrdies', display_name: 'Gestió de Guàrdies', description: 'Mòdul per gestionar les guàrdies dels professors' },
-      { name: 'Enquestes', display_name: 'Enquestes', description: 'Mòdul per crear i gestionar enquestes' },
-      { name: 'Recursos', display_name: 'Recursos', description: 'Mòdul per gestionar recursos i reserves' },
-      { name: 'Analítiques', display_name: 'Analítiques', description: 'Mòdul per visualitzar analítiques i informes' }
-    ];
-
-    const createdModules = await sql`
-      INSERT INTO modules (name, display_name, description)
-      SELECT * FROM json_populate_recordset(null::modules, ${JSON.stringify(modulesData)})
-      RETURNING *
-    `;
-    console.log(`✅ ${createdModules.length} módulos creados`);
-
-    // 4. Asignar módulos al instituto
-    console.log('🔗 Asignando módulos al instituto...');
-    const instituteModulesData = createdModules.map(module => ({
-      institute_id: institute.id,
-      module_id: module.id,
-      is_active: true,
-      settings: {}
-    }));
-
-    await sql`
-      INSERT INTO institute_modules (institute_id, module_id, is_active, settings)
-      SELECT * FROM json_populate_recordset(null::institute_modules, ${JSON.stringify(instituteModulesData)})
-    `;
-    console.log('✅ Módulos asignados al instituto');
-
-    // 5. Crear usuarios de prueba
-    console.log('👥 Creando usuarios de prueba...');
+    console.log('📡 Conectando a la base de datos...');
     
-    // Hash de contraseñas
-    const passwordHash = await bcrypt.hash('password123', 10);
+    // Crear conexión a la base de datos
+    const sql = postgres(databaseUrl, { max: 1 });
+    const db = drizzle(sql);
+
+    // Verificar que las tablas existan
+    console.log('🔍 Verificando estructura de la base de datos...');
     
-    const usersData = [
-      {
-        institute_id: institute.id,
-        email: 'superadmin@gei.es',
-        display_name: 'Super Administrador',
-        first_name: 'Super',
-        last_name: 'Admin',
-        role: 'super_admin',
-        password_hash: passwordHash,
-        preferences: {
-          theme: 'dark',
-          language: 'ca',
-          notifications: true
-        }
-      },
-      {
-        institute_id: institute.id,
-        email: 'admin@gei.es',
-        display_name: 'Administrador Institut',
-        first_name: 'Admin',
-        last_name: 'Institut',
-        role: 'institute_admin',
-        password_hash: passwordHash,
-        preferences: {
-          theme: 'light',
-          language: 'ca',
-          notifications: true
-        }
-      },
-      {
-        institute_id: institute.id,
-        email: 'professor@gei.es',
-        display_name: 'Professor Prova',
-        first_name: 'Professor',
-        last_name: 'Prova',
-        role: 'teacher',
-        password_hash: passwordHash,
-        preferences: {
-          theme: 'system',
-          language: 'ca',
-          notifications: true
-        }
-      },
-      {
-        institute_id: institute.id,
-        email: 'alumne@gei.es',
-        display_name: 'Alumne Prova',
-        first_name: 'Alumne',
-        last_name: 'Prova',
-        role: 'student',
-        password_hash: passwordHash,
-        preferences: {
-          theme: 'light',
-          language: 'ca',
-          notifications: false
-        }
-      }
-    ];
-
-    const createdUsers = await sql`
-      INSERT INTO users (institute_id, email, display_name, first_name, last_name, role, password_hash, preferences)
-      SELECT * FROM json_populate_recordset(null::users, ${JSON.stringify(usersData)})
-      RETURNING *
+    const tables = await sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
+      ORDER BY table_name;
     `;
-    console.log(`✅ ${createdUsers.length} usuarios creados`);
 
-    // 6. Crear datos de prueba adicionales
-    console.log('📊 Creando datos adicionales de prueba...');
+    if (tables.length === 0) {
+      throw new Error('No se encontraron tablas. Ejecuta primero: npm run db:create-tables');
+    }
 
-    // Crear algunas clases
-    const classesData = [
-      {
-        institute_id: institute.id,
-        academic_year_id: academicYear.id,
-        name: '1r ESO A',
-        code: '1ESOA',
-        description: 'Primer curs d\'ESO, grup A',
-        max_students: 30,
-        is_active: true
-      },
-      {
-        institute_id: institute.id,
-        academic_year_id: academicYear.id,
-        name: '2n ESO B',
-        code: '2ESOB',
-        description: 'Segon curs d\'ESO, grup B',
-        max_students: 28,
-        is_active: true
-      }
-    ];
+    console.log(`✅ ${tables.length} tablas encontradas`);
 
-    const createdClasses = await sql`
-      INSERT INTO classes (institute_id, academic_year_id, name, code, description, max_students, is_active)
-      SELECT * FROM json_populate_recordset(null::classes, ${JSON.stringify(classesData)})
-      RETURNING *
+    // Datos básicos para inicializar
+    const initData = {
+      institutes: [
+        {
+          name: 'Instituto Demo',
+          code: 'DEMO001',
+          address: 'Calle Demo 123, Ciudad Demo',
+          phone: '+34 123 456 789',
+          email: 'info@institutodemo.es',
+          website: 'https://institutodemo.es',
+          is_active: true
+        }
+      ],
+      modules: [
+        {
+          name: 'Gestión de Usuarios',
+          code: 'USERS',
+          description: 'Módulo para gestión de usuarios y roles',
+          status: 'active'
+        },
+        {
+          name: 'Gestión Académica',
+          code: 'ACADEMIC',
+          description: 'Módulo para gestión académica y evaluaciones',
+          status: 'active'
+        },
+        {
+          name: 'Asistencia',
+          code: 'ATTENDANCE',
+          description: 'Módulo para control de asistencia',
+          status: 'active'
+        },
+        {
+          name: 'Guardias',
+          code: 'GUARD_DUTY',
+          description: 'Módulo para gestión de guardias',
+          status: 'active'
+        },
+        {
+          name: 'Recursos',
+          code: 'RESOURCES',
+          description: 'Módulo para gestión de recursos',
+          status: 'active'
+        },
+        {
+          name: 'Analíticas',
+          code: 'ANALYTICS',
+          description: 'Módulo para análisis y reportes',
+          status: 'active'
+        }
+      ],
+      competencies: [
+        {
+          name: 'Comunicación Lingüística',
+          description: 'Capacidad de comunicarse de forma efectiva',
+          category: 'Lengua'
+        },
+        {
+          name: 'Competencia Matemática',
+          description: 'Capacidad de aplicar razonamientos matemáticos',
+          category: 'Matemáticas'
+        },
+        {
+          name: 'Competencia Digital',
+          description: 'Uso seguro y crítico de las tecnologías',
+          category: 'Tecnología'
+        },
+        {
+          name: 'Aprender a Aprender',
+          description: 'Desarrollo de estrategias de aprendizaje',
+          category: 'Metacognición'
+        },
+        {
+          name: 'Competencias Sociales',
+          description: 'Habilidades para la convivencia y cooperación',
+          category: 'Social'
+        },
+        {
+          name: 'Sentido de Iniciativa',
+          description: 'Capacidad de emprender y crear',
+          category: 'Emprendimiento'
+        },
+        {
+          name: 'Conciencia y Expresiones Culturales',
+          description: 'Apreciación y expresión artística',
+          category: 'Cultura'
+        }
+      ]
+    };
+
+    console.log('\n📝 INSERTANDO DATOS BÁSICOS');
+    console.log('============================');
+
+    // Insertar instituto demo
+    console.log('🏫 Insertando instituto demo...');
+    const instituteResult = await sql`
+      INSERT INTO institutes (name, code, address, phone, email, website, is_active)
+      VALUES (${initData.institutes[0].name}, ${initData.institutes[0].code}, 
+              ${initData.institutes[0].address}, ${initData.institutes[0].phone}, 
+              ${initData.institutes[0].email}, ${initData.institutes[0].website}, 
+              ${initData.institutes[0].is_active})
+      ON CONFLICT (code) DO NOTHING
+      RETURNING id;
     `;
-    console.log(`✅ ${createdClasses.length} clases creadas`);
 
-    // Crear algunas competencias
-    const competenciesData = [
-      {
-        institute_id: institute.id,
-        name: 'Competència Digital',
-        description: 'Ús segur i crític de les tecnologies de la informació',
-        category: 'TIC',
-        is_active: true
-      },
-      {
-        institute_id: institute.id,
-        name: 'Competència Lingüística',
-        description: 'Comunicació efectiva en català i altres llengües',
-        category: 'Llengües',
-        is_active: true
+    let instituteId;
+    if (instituteResult.length > 0) {
+      instituteId = instituteResult[0].id;
+      console.log(`✅ Instituto creado con ID: ${instituteId}`);
+    } else {
+      // Obtener el ID del instituto existente
+      const existingInstitute = await sql`
+        SELECT id FROM institutes WHERE code = ${initData.institutes[0].code}
+      `;
+      instituteId = existingInstitute[0].id;
+      console.log(`✅ Instituto ya existía con ID: ${instituteId}`);
+    }
+
+    // Insertar módulos
+    console.log('📦 Insertando módulos...');
+    for (const module of initData.modules) {
+      const moduleResult = await sql`
+        INSERT INTO modules (name, code, description, status)
+        VALUES (${module.name}, ${module.code}, ${module.description}, ${module.status})
+        ON CONFLICT (code) DO NOTHING
+        RETURNING id;
+      `;
+      
+      if (moduleResult.length > 0) {
+        console.log(`  ✅ Módulo ${module.name} creado`);
+        
+        // Asociar módulo al instituto
+        await sql`
+          INSERT INTO institute_modules (institute_id, module_id, is_active)
+          VALUES (${instituteId}, ${moduleResult[0].id}, true)
+          ON CONFLICT (institute_id, module_id) DO NOTHING;
+        `;
+      } else {
+        console.log(`  ⚠️ Módulo ${module.name} ya existía`);
       }
-    ];
+    }
 
-    const createdCompetencies = await sql`
-      INSERT INTO competencies (institute_id, name, description, category, is_active)
-      SELECT * FROM json_populate_recordset(null::competencies, ${JSON.stringify(competenciesData)})
-      RETURNING *
+    // Insertar competencias
+    console.log('🎯 Insertando competencias...');
+    for (const competency of initData.competencies) {
+      await sql`
+        INSERT INTO competencies (institute_id, name, description, category, is_active)
+        VALUES (${instituteId}, ${competency.name}, ${competency.description}, ${competency.category}, true)
+        ON CONFLICT (institute_id, name) DO NOTHING;
+      `;
+      console.log(`  ✅ Competencia ${competency.name} insertada`);
+    }
+
+    // Crear año académico demo
+    console.log('📅 Creando año académico demo...');
+    const currentYear = new Date().getFullYear();
+    const academicYearResult = await sql`
+      INSERT INTO academic_years (institute_id, name, start_date, end_date, status)
+      VALUES (${instituteId}, '${currentYear}-${currentYear + 1}', 
+              '${currentYear}-09-01', '${currentYear + 1}-06-30', 'active')
+      ON CONFLICT (institute_id, name) DO NOTHING
+      RETURNING id;
     `;
-    console.log(`✅ ${createdCompetencies.length} competencias creadas`);
 
-    // Crear algunos recursos
-    const resourcesData = [
-      {
-        institute_id: institute.id,
-        name: 'Aula d\'Informàtica 1',
-        type: 'classroom',
-        description: 'Aula amb 25 ordinadors per classes d\'informàtica',
-        capacity: 25,
-        is_active: true
-      },
-      {
-        institute_id: institute.id,
-        name: 'Gimnas',
-        type: 'sports',
-        description: 'Gimnas per activitats esportives',
-        capacity: 50,
-        is_active: true
-      }
-    ];
+    if (academicYearResult.length > 0) {
+      console.log(`✅ Año académico ${currentYear}-${currentYear + 1} creado`);
+    } else {
+      console.log(`✅ Año académico ${currentYear}-${currentYear + 1} ya existía`);
+    }
 
-    const createdResources = await sql`
-      INSERT INTO resources (institute_id, name, type, description, capacity, is_active)
-      SELECT * FROM json_populate_recordset(null::resources, ${JSON.stringify(resourcesData)})
-      RETURNING *
+    // Verificar datos insertados
+    console.log('\n📊 VERIFICANDO DATOS INSERTADOS');
+    console.log('===============================');
+
+    const counts = await sql`
+      SELECT 
+        (SELECT COUNT(*) FROM institutes) as institutes_count,
+        (SELECT COUNT(*) FROM modules) as modules_count,
+        (SELECT COUNT(*) FROM competencies) as competencies_count,
+        (SELECT COUNT(*) FROM academic_years) as academic_years_count,
+        (SELECT COUNT(*) FROM institute_modules) as institute_modules_count;
     `;
-    console.log(`✅ ${createdResources.length} recursos creados`);
 
-    console.log('\n🎉 Base de datos inicializada correctamente!');
-    console.log('==================================================');
-    console.log('📋 Resumen de datos creados:');
-    console.log(`  🏫 Instituto: ${institute.name}`);
-    console.log(`  📅 Año académico: ${academicYear.name}`);
-    console.log(`  📚 Módulos: ${createdModules.length}`);
-    console.log(`  👥 Usuarios: ${createdUsers.length}`);
-    console.log(`  🏫 Clases: ${createdClasses.length}`);
-    console.log(`  🎯 Competencias: ${createdCompetencies.length}`);
-    console.log(`  📦 Recursos: ${createdResources.length}`);
+    console.log(`🏫 Institutos: ${counts[0].institutes_count}`);
+    console.log(`📦 Módulos: ${counts[0].modules_count}`);
+    console.log(`🎯 Competencias: ${counts[0].competencies_count}`);
+    console.log(`📅 Años académicos: ${counts[0].academic_years_count}`);
+    console.log(`🔗 Módulos de instituto: ${counts[0].institute_modules_count}`);
 
-    console.log('\n🔑 Credenciales de acceso:');
-    console.log('  👑 Super Admin: superadmin@gei.es / password123');
-    console.log('  👨‍💼 Admin: admin@gei.es / password123');
-    console.log('  👨‍🏫 Professor: professor@gei.es / password123');
-    console.log('  👨‍🎓 Alumne: alumne@gei.es / password123');
-
-  } catch (error) {
-    console.error('❌ Error al inicializar la base de datos:', error);
-    throw error;
-  } finally {
+    // Cerrar conexión
     await sql.end();
+    
+    console.log('\n✅ Base de datos inicializada exitosamente');
+    console.log('🚀 La aplicación está lista para usar');
+    
+  } catch (error) {
+    console.error('\n❌ ERROR AL INICIALIZAR BASE DE DATOS:');
+    console.error('=====================================');
+    console.error(error.message);
+    
+    if (error.message.includes('No se encontraron tablas')) {
+      console.error('\n💡 EJECUTA PRIMERO:');
+      console.error('==================');
+      console.error('npm run db:create-tables');
+    }
+    
+    process.exit(1);
   }
 }
 
-// Ejecutar inicialización
-initializeDatabaseSimple()
-  .then(() => {
-    console.log('✅ Script completado exitosamente');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('❌ Error en el script:', error);
-    process.exit(1);
-  }); 
+// Ejecutar el script
+initDatabase(); 
