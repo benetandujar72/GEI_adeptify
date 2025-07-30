@@ -1,3 +1,3 @@
 // server/index.ts
-import './src/index';
+import './src/index.ts';
 export { db } from './src/database';

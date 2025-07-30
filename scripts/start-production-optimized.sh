@@ -11,13 +11,40 @@ echo "🌍 NODE_ENV: $NODE_ENV"
 echo "🔌 PORT: $PORT"
 echo "🗄️ DATABASE_URL: ${DATABASE_URL:0:50}..." # Mostrar solo los primeros 50 caracteres por seguridad
 
+# Configurar variables de entorno por defecto si no están definidas
+if [ -z "$NODE_ENV" ]; then
+    export NODE_ENV=production
+    echo "🔧 NODE_ENV configurada por defecto: $NODE_ENV"
+fi
+
+if [ -z "$PORT" ]; then
+    export PORT=3000
+    echo "🔧 PORT configurada por defecto: $PORT"
+fi
+
 if [ -z "$DATABASE_URL" ]; then
-    echo "❌ ERROR: DATABASE_URL no configurada - CRÍTICO"
-    echo "🔧 Configurando DATABASE_URL con variables separadas..."
-    export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
-    echo "✅ DATABASE_URL configurada: postgresql://${DB_USER}:***@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
+    echo "⚠️  DATABASE_URL no configurada - intentando configurar con variables separadas..."
+    if [ -n "$DB_USER" ] && [ -n "$DB_PASSWORD" ] && [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ]; then
+        export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
+        echo "✅ DATABASE_URL configurada: postgresql://${DB_USER}:***@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
+    else
+        echo "⚠️  Variables de base de datos separadas no configuradas - usando configuración local"
+        export DATABASE_URL="postgresql://gei_user:gei_password@localhost:5432/gei_unified"
+        echo "✅ DATABASE_URL configurada con valores por defecto"
+    fi
 else
     echo "✅ DATABASE_URL configurada"
+fi
+
+# Configurar otras variables críticas por defecto
+if [ -z "$SESSION_SECRET" ]; then
+    export SESSION_SECRET="gei_adeptify_session_secret_2024_secure_key_123456789_abcdefghijklmnop"
+    echo "🔧 SESSION_SECRET configurada por defecto"
+fi
+
+if [ -z "$JWT_SECRET" ]; then
+    export JWT_SECRET="gei_jwt_secret_2024_secure_key_123456789_abcdefghijklmnop"
+    echo "🔧 JWT_SECRET configurada por defecto"
 fi
 
 # Mostrar información del entorno

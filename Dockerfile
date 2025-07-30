@@ -12,13 +12,16 @@ RUN echo "📁 === DIRECTORIO DE TRABAJO ESTABLECIDO: $(pwd) ==="
 
 # Copiar archivos de configuración en una sola capa
 RUN echo "📋 === COPIANDO ARCHIVOS DE CONFIGURACIÓN ===" && \
-    echo "📄 Archivos a copiar: package*.json, tsconfig.json, drizzle.config.ts, tailwind.config.ts, postcss.config.js, vite.config.ts, esbuild.config.js"
-COPY package*.json tsconfig.json drizzle.config.ts tailwind.config.ts postcss.config.js vite.config.ts esbuild.config.js ./
+    echo "📄 Archivos a copiar: package*.json, tsconfig.json, drizzle.config.ts, tailwind.config.ts, postcss.config.js, vite.config.ts, esbuild.config.js, env.example"
+COPY package*.json tsconfig.json drizzle.config.ts tailwind.config.ts postcss.config.js vite.config.ts esbuild.config.js env.example ./
 
 # Verificar archivos copiados
 RUN echo "🔍 === VERIFICANDO ARCHIVOS DE CONFIGURACIÓN COPIADOS ===" && \
-    ls -la package*.json tsconfig.json drizzle.config.ts tailwind.config.ts postcss.config.js vite.config.ts esbuild.config.js && \
-    echo "✅ Archivos de configuración verificados"
+    ls -la package*.json tsconfig.json drizzle.config.ts tailwind.config.ts postcss.config.js vite.config.ts esbuild.config.js env.example && \
+    echo "✅ Archivos de configuración verificados" && \
+    echo "📄 Copiando env.example como .env para desarrollo..." && \
+    cp env.example .env && \
+    echo "✅ Archivo .env creado"
 
 # Copiar archivos de configuración del cliente en una sola capa
 RUN echo "📋 === COPIANDO ARCHIVOS DE CONFIGURACIÓN DEL CLIENTE ===" && \
@@ -255,6 +258,7 @@ RUN echo "📁 === DIRECTORIO DE TRABAJO ESTABLECIDO: $(pwd) ==="
 # Copiar archivos de configuración
 RUN echo "📋 === COPIANDO ARCHIVOS DE CONFIGURACIÓN A PRODUCCIÓN ==="
 COPY --from=base /app/package*.json ./
+COPY --from=base /app/env.example ./
 
 # Instalar solo dependencias de producción
 RUN echo "📦 === INSTALANDO DEPENDENCIAS DE PRODUCCIÓN ===" && \
@@ -313,7 +317,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 RUN echo "🔧 === VARIABLES DE ENTORNO CONFIGURADAS ===" && \
     echo "NODE_ENV: $NODE_ENV" && \
-    echo "PORT: $PORT"
+    echo "PORT: $PORT" && \
+    echo "📄 Copiando env.example como .env para producción..." && \
+    cp env.example .env && \
+    echo "✅ Archivo .env creado para producción"
 
 # Health check optimizado
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
