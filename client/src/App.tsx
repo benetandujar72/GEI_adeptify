@@ -5,6 +5,8 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from '@/hooks/useAuth.tsx';
 import Navigation from '@/components/Navigation.tsx';
 import Dashboard from '@/pages/Dashboard.tsx';
+import EducationalDashboard from '@/pages/EducationalDashboard.tsx';
+import CoursesPage from '@/pages/CoursesPage.tsx';
 import Competencies from '@/pages/adeptify/Competencies.tsx';
 import Criteria from '@/pages/adeptify/Criteria.tsx';
 import Evaluations from '@/pages/adeptify/Evaluations.tsx';
@@ -73,6 +75,23 @@ function App() {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <Dashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            </Route>
+            
+            {/* Educational System Routes */}
+            <Route path="/educational-dashboard">
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <EducationalDashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/courses">
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <CoursesPage />
                 </ProtectedLayout>
               </ProtectedRoute>
             </Route>

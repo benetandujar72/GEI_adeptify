@@ -31,7 +31,11 @@ import {
   Shield,
   TrendingUp,
   FileText,
-  MessageSquare
+  MessageSquare,
+  GraduationCap,
+  Target,
+  BarChart3,
+  Award
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -76,6 +80,18 @@ export default function Navigation() {
       label: 'Dashboard',
       href: '/',
       icon: LayoutDashboard
+    },
+    {
+      label: 'Sistema Educativo',
+      href: '/educational-dashboard',
+      icon: GraduationCap,
+      children: [
+        { label: 'Dashboard Educativo', href: '/educational-dashboard', icon: BarChart3 },
+        { label: 'Cursos', href: '/courses', icon: BookOpen },
+        { label: 'Evaluaciones', href: '/evaluations', icon: Award },
+        { label: 'Calificaciones', href: '/grades', icon: Target },
+        { label: 'Asistencia', href: '/attendance', icon: Users }
+      ]
     },
     {
       label: 'Adeptify',

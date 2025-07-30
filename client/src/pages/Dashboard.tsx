@@ -12,11 +12,16 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Plus
+  Plus,
+  GraduationCap,
+  Target,
+  BarChart3,
+  Award
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { Link } from 'react-router-dom';
 
 interface DashboardStats {
   totalStudents: number;
@@ -424,6 +429,44 @@ export default function Dashboard() {
             </Card>
           </div>
         )}
+
+        {/* Navegación Rápida al Dashboard Educativo */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              Acceso Rápido al Sistema Educativo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Button asChild variant="outline" className="h-auto p-4 flex-col">
+                <Link to="/educational-dashboard">
+                  <BarChart3 className="h-8 w-8 mb-2" />
+                  <span>Dashboard Educativo</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto p-4 flex-col">
+                <Link to="/courses">
+                  <BookOpen className="h-8 w-8 mb-2" />
+                  <span>Gestionar Cursos</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto p-4 flex-col">
+                <Link to="/evaluations">
+                  <Award className="h-8 w-8 mb-2" />
+                  <span>Gestionar Evaluaciones</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto p-4 flex-col">
+                <Link to="/grades">
+                  <Target className="h-8 w-8 mb-2" />
+                  <span>Gestionar Calificaciones</span>
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
