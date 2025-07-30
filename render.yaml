@@ -8,8 +8,8 @@ services:
       npm run build:server
       npm run build:client
     startCommand: |
-      chmod +x scripts/start-render.sh
-      ./scripts/start-render.sh
+      chmod +x scripts/start-production-optimized.sh
+      ./scripts/start-production-optimized.sh
     envVars:
       # Configuración del servidor
       - key: NODE_ENV

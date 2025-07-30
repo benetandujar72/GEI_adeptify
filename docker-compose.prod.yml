@@ -5,7 +5,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: gei-adeptify-app
     restart: unless-stopped
     ports:
@@ -151,8 +151,7 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./microservices/user-service/src/database/migrations:/docker-entrypoint-initdb.d
-      - ./microservices/user-service/scripts/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./database/init:/docker-entrypoint-initdb.d
       - postgres_backups:/var/backups/postgresql
     ports:
       - "5432:5432"
@@ -224,7 +223,7 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@adeptify.es}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--providers.file.directory=/etc/traefik/dynamic"

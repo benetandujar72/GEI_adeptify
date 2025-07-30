@@ -3,7 +3,7 @@
 # Script de inicio optimizado para producción en Render.com
 echo "🚀 === INICIANDO GEI UNIFIED PLATFORM EN PRODUCCIÓN ==="
 echo "📅 Timestamp: $(date)"
-echo "🔧 Versión del script: 2.0"
+echo "🔧 Versión del script: 3.0 - Optimizado para Docker"
 
 # Verificar variables de entorno críticas
 echo "🔍 === VERIFICANDO VARIABLES DE ENTORNO ==="
@@ -22,29 +22,20 @@ if [ -z "$PORT" ]; then
     echo "🔧 PORT configurada por defecto: $PORT"
 fi
 
+# Verificar variables críticas
 if [ -z "$DATABASE_URL" ]; then
-    echo "⚠️  DATABASE_URL no configurada - intentando configurar con variables separadas..."
-    if [ -n "$DB_USER" ] && [ -n "$DB_PASSWORD" ] && [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ]; then
-        export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
-        echo "✅ DATABASE_URL configurada: postgresql://${DB_USER}:***@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
-    else
-        echo "⚠️  Variables de base de datos separadas no configuradas - usando configuración local"
-        export DATABASE_URL="postgresql://gei_user:gei_password@localhost:5432/gei_unified"
-        echo "✅ DATABASE_URL configurada con valores por defecto"
-    fi
-else
-    echo "✅ DATABASE_URL configurada"
+    echo "⚠️  ADVERTENCIA: DATABASE_URL no configurada"
+    echo "🔧 Configura las variables de base de datos en el entorno"
 fi
 
-# Configurar otras variables críticas por defecto
 if [ -z "$SESSION_SECRET" ]; then
-    export SESSION_SECRET="gei_adeptify_session_secret_2024_secure_key_123456789_abcdefghijklmnop"
-    echo "🔧 SESSION_SECRET configurada por defecto"
+    echo "⚠️  ADVERTENCIA: SESSION_SECRET no configurado"
+    echo "🔧 Configura SESSION_SECRET en el entorno"
 fi
 
 if [ -z "$JWT_SECRET" ]; then
-    export JWT_SECRET="gei_jwt_secret_2024_secure_key_123456789_abcdefghijklmnop"
-    echo "🔧 JWT_SECRET configurada por defecto"
+    echo "⚠️  ADVERTENCIA: JWT_SECRET no configurado"
+    echo "🔧 Configura JWT_SECRET en el entorno"
 fi
 
 # Mostrar información del entorno
@@ -72,11 +63,10 @@ if [ ! -f "dist/index.js" ]; then
     echo "🔍 Verificando directorio actual:"
     ls -la
     echo "🔧 Intentando rebuild..."
-    npm run build
+    npm run build:server
     if [ ! -f "dist/index.js" ]; then
         echo "❌ Error: Build falló. Verificando errores..."
         ls -la dist/ 2>/dev/null || echo "Directorio dist no existe"
-        echo "🔍 Verificando logs de build..."
         echo "❌ CRÍTICO: No se puede continuar sin el archivo de build"
         exit 1
     fi
@@ -159,4 +149,4 @@ echo "📅 Timestamp de inicio: $(date)"
 
 # Ejecutar con más información de debug
 echo "🔧 === EJECUTANDO APLICACIÓN ==="
-exec node --trace-warnings dist/index.js 2>&1 | tee -a /tmp/app.log 
+exec node --trace-warnings dist/index.js 
