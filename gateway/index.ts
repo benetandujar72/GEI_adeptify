@@ -3,7 +3,6 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import { logger } from './utils/logger.js';
 import { CircuitBreaker } from './utils/circuit-breaker.js';
 import { ServiceDiscovery } from './utils/service-discovery.js';
@@ -13,7 +12,8 @@ import { MetricsCollector } from './utils/metrics-collector.js';
 import { RequestValidator } from './utils/request-validator.js';
 import { ResponseTransformer } from './utils/response-transformer.js';
 
-dotenv.config();
+// NO usar dotenv - las variables vienen del sistema
+// dotenv.config();
 
 const app = express();
 const PORT = process.env.GATEWAY_PORT || 5000;

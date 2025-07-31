@@ -1,7 +1,7 @@
 import { defineConfig } from 'drizzle-kit';
-import { config } from 'dotenv';
 
-config();
+// NO usar dotenv - las variables vienen del sistema
+// config();
 
 export default defineConfig({
   schema: './shared/schema.ts',

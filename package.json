@@ -28,6 +28,7 @@
     "start:prod": "node scripts/start-production.js",
     "start:render": "node scripts/start-render.js",
     "verify:render": "node scripts/verify-render-deployment.js",
+    "verify:deployment-fixes": "node scripts/verify-deployment-fixes.js",
     "create:admin": "node scripts/create-admin-user.js",
     "test:login": "node scripts/test-login.js",
     "db:create-educational": "node scripts/create-educational-tables.js",
