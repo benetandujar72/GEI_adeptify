@@ -1,248 +1,229 @@
-# 🚀 ADEPTIFY - Plataforma Educativa Inteligente
+# 🎓 GEI_adeptify - Ecosistema Educativo Inteligente Unificado
+
+[![Node.js](https://img.shields.io/badge/Node.js-24.5.0-green.svg)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/Python-3.11.9-blue.svg)](https://python.org/)
+[![Docker](https://img.shields.io/badge/Docker-28.3.2-blue.svg)](https://docker.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## 📋 Descripción
 
-Adeptify es una plataforma educativa integral que combina microservicios avanzados, inteligencia artificial y tecnologías modernas para proporcionar una experiencia de aprendizaje personalizada y eficiente.
+GEI_adeptify es una plataforma educativa inteligente unificada que integra múltiples servicios y tecnologías para crear un ecosistema completo de aprendizaje adaptativo.
 
-## 🏗️ Arquitectura
+## 🚀 Características Principales
 
-### Microservicios Implementados (17 servicios)
+- **Frontend React** con TypeScript y Tailwind CSS
+- **Backend Node.js** con Express y microservicios
+- **Inteligencia Artificial** integrada con OpenAI, Anthropic y Google AI
+- **Bases de datos múltiples**: PostgreSQL, MongoDB, Redis
+- **Sistema de autenticación** con Passport.js
+- **Interfaz de usuario moderna** con Radix UI
+- **Calendario interactivo** con FullCalendar
+- **Sistema de notificaciones** en tiempo real
+- **Análisis predictivo** y personalización
 
-#### Core Services
-- **user-service** - Gestión de usuarios y autenticación
-- **student-service** - Gestión de estudiantes
-- **course-service** - Gestión de cursos
-- **resource-service** - Gestión de recursos educativos
-- **communication-service** - Comunicación y mensajería
-- **analytics-service** - Análisis y reportes
-- **auth-service** - Autenticación y autorización
-- **notification-service** - Notificaciones
-- **file-service** - Gestión de archivos
-- **search-service** - Búsqueda e indexación
+## 🛠️ Tecnologías Utilizadas
 
-#### AI Services
-- **llm-gateway** - Gateway para servicios de IA
-- **content-generation** - Generación de contenido
-- **chatbot** - Chatbot inteligente
-- **predictive-analytics** - Análisis predictivo
-- **personalization-engine** - Motor de personalización
-- **ml-pipeline** - Pipeline de machine learning
+### Frontend
+- React 18.3.1
+- TypeScript 5.6.3
+- Tailwind CSS 3.4.17
+- Radix UI Components
+- React Query (TanStack)
+- React Router DOM
+- Framer Motion
 
-#### MCP Services
-- **mcp-orchestrator** - Orquestador MCP
-- **mcp-servers** - Servidores MCP
+### Backend
+- Node.js 24.5.0
+- Express.js 4.21.2
+- TypeScript
+- Drizzle ORM
+- Passport.js
+- Socket.io
 
-## 🎨 Frontend
+### Inteligencia Artificial
+- OpenAI API
+- Anthropic Claude API
+- Google Generative AI
+- TensorFlow
+- PyTorch
+- scikit-learn
 
-### Tecnologías
-- **React 18** con TypeScript
-- **Vite** como bundler
-- **Tailwind CSS** para estilos
-- **Vitest** para testing
-- **React Router** para navegación
+### Bases de Datos
+- PostgreSQL 15
+- MongoDB 7
+- Redis 7
+- SQLite (desarrollo)
 
-### Estructura
-```
-client/
-├── src/
-│   ├── components/     # Componentes reutilizables
-│   ├── pages/         # Páginas de la aplicación
-│   ├── services/      # Servicios de API
-│   ├── hooks/         # Custom hooks
-│   ├── context/       # Context providers
-│   ├── types/         # TypeScript types
-│   ├── lib/           # Utilidades
-│   ├── assets/        # Recursos estáticos
-│   ├── tests/         # Tests unitarios
-│   └── i18n/          # Internacionalización
-├── public/            # Archivos públicos
-└── dist/              # Build de producción
-```
+### DevOps & Herramientas
+- Docker & Docker Compose
+- Vite
+- ESLint & Prettier
+- Vitest
+- GitHub Actions
 
-## 📱 Mobile App
-
-### Tecnologías
-- **React Native** con Expo
-- **TypeScript**
-- **Axios** para HTTP requests
-- **AsyncStorage** para persistencia
-
-### Estructura
-```
-mobile-app/
-├── src/
-│   ├── components/    # Componentes móviles
-│   ├── screens/       # Pantallas de la app
-│   ├── services/      # Servicios de API
-│   ├── navigation/    # Navegación
-│   └── utils/         # Utilidades
-```
-
-## 🌐 API Gateway
-
-### Funcionalidades Avanzadas
-- **Circuit Breaker** - Patrón de resiliencia
-- **Service Discovery** - Descubrimiento de servicios
-- **Load Balancing** - Balanceo de carga
-- **Caching** - Caché LRU con TTL
-- **Metrics Collection** - Métricas en tiempo real
-- **Request Validation** - Validación de requests
-- **Response Transformation** - Transformación de respuestas
-- **Rate Limiting** - Limitación de tasa
-- **Security Middleware** - Middleware de seguridad
-
-## 🔒 Seguridad
-
-### SecurityManager
-- **JWT Authentication** - Tokens seguros
-- **RBAC Authorization** - Control de acceso basado en roles
-- **Rate Limiting** - Protección contra ataques
-- **Input Validation** - Sanitización de datos
-- **Threat Detection** - Detección de SQL injection, XSS, CSRF
-- **Encryption** - Cifrado AES-256-GCM
-- **Audit Logging** - Logging completo de eventos
-
-## 📊 Monitoreo
-
-### Stack Completo
-- **Prometheus** - 25+ jobs de monitoreo
-- **Grafana** - Dashboards interactivos
-- **AlertManager** - 27 reglas de alerta
-- **Blackbox Monitoring** - Health checks externos
-
-### Métricas Monitoreadas
-- **Application**: Request rate, response time, error rate
-- **Infrastructure**: CPU, memory, disk usage
-- **Security**: Threats, authentication failures
-- **Performance**: Overall scores, latency
-
-## 🚀 Infraestructura
-
-### Kubernetes
-```
-k8s/
-├── base/              # Configuración base
-├── overlays/
-│   ├── staging/       # Entorno de staging
-│   └── production/    # Entorno de producción
-```
-
-### Docker
-- **docker-compose.dev.yml** - Entorno de desarrollo
-- **docker-compose.prod.yml** - Entorno de producción
-- **Dockerfile** - Imagen principal
-- **client/Dockerfile.prod** - Imagen del cliente
-
-### CI/CD
-- **GitHub Actions** - Pipelines automatizados
-- **GitLab CI** - Integración continua
-- **Jenkins** - Pipelines de despliegue
-
-## 🧪 Testing
-
-### Cobertura Completa
-- **Unit Tests** - Tests unitarios con Vitest
-- **Integration Tests** - Tests de integración
-- **E2E Tests** - Tests end-to-end con Playwright
-- **Performance Tests** - Tests de rendimiento
-
-## 📦 Instalación
+## 📦 Instalación Rápida
 
 ### Prerrequisitos
-- Node.js 18+
-- Docker y Docker Compose
-- Kubernetes (para producción)
-- PostgreSQL
-- Redis
 
-### Desarrollo Local
+- Windows 10/11
+- PowerShell (ejecutar como administrador)
+- Conexión a internet
+- Al menos 8GB de RAM
+- 20GB de espacio libre
+
+### 1. Clonar el Repositorio
+
 ```bash
-# Clonar repositorio
-git clone <repository-url>
-cd adeptify
+git clone https://github.com/benetandujar72/GEI_adeptify.git
+cd GEI_adeptify
+```
 
-# Instalar dependencias
+### 2. Instalación Automática (Recomendada)
+
+```powershell
+# Ejecutar PowerShell como administrador
+Set-ExecutionPolicy Bypass -Scope Process -Force
+.\scripts\setup-development-environment.ps1
+```
+
+### 3. Instalación Manual
+
+#### Verificar Herramientas Instaladas
+```powershell
+.\scripts\check-deps.ps1
+```
+
+#### Instalar Dependencias Node.js
+```bash
 npm install
-
-# Configurar variables de entorno
-cp env.example .env
-cp env.microservices .env.microservices
-
-# Iniciar servicios
-docker-compose -f docker-compose.dev.yml up -d
-
-# Iniciar frontend
-cd client
-npm run dev
-
-# Iniciar microservicios
-cd ../microservices/user-service
-npm run dev
 ```
 
-### Producción
+#### Instalar Dependencias Python
 ```bash
-# Desplegar en Kubernetes
-kubectl apply -k k8s/overlays/production/
-
-# Verificar despliegue
-kubectl get pods -n adeptify-production
+pip install -r requirements.txt
 ```
 
-## 🔧 Configuración
-
-### Variables de Entorno
+#### Iniciar Bases de Datos
 ```bash
-# Base
-NODE_ENV=production
-PORT=3000
+docker-compose -f docker-compose.local.yml up -d
+```
 
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/adeptify
-REDIS_URL=redis://localhost:6379
+## 🔧 Scripts Disponibles
 
-# Security
-JWT_SECRET=your-jwt-secret
-ENCRYPTION_KEY=your-encryption-key
+### Verificación y Diagnóstico
+- `scripts/check-deps.ps1` - Verificación rápida de dependencias
+- `scripts/verify-dependencies.ps1` - Verificación detallada
+- `scripts/check-installation.ps1` - Verificación completa de instalación
 
-# External Services
-OPENAI_API_KEY=your-openai-key
+### Instalación
+- `scripts/install-dependencies.ps1` - Instalación completa
+- `scripts/install-python-deps.ps1` - Solo dependencias Python
+- `scripts/setup-local-env.ps1` - Configuración de entorno
+
+### Desarrollo
+- `scripts/setup-development-environment.ps1` - Configuración completa
+
+## 🗄️ Configuración de Bases de Datos
+
+### Servicios Disponibles
+- **PostgreSQL**: `localhost:5432`
+- **MongoDB**: `localhost:27017`
+- **Redis**: `localhost:6379`
+- **pgAdmin**: `http://localhost:5050`
+- **Mongo Express**: `http://localhost:8081`
+
+### Credenciales por Defecto
+```yaml
+PostgreSQL:
+  Usuario: adeptify_user
+  Contraseña: adeptify_password
+  Base de datos: gei_adeptify
+
+MongoDB:
+  Usuario: adeptify_admin
+  Contraseña: adeptify_password
+  Base de datos: gei_adeptify
+
+pgAdmin:
+  Email: admin@adeptify.es
+  Contraseña: admin123
+
+Mongo Express:
+  Usuario: admin
+  Contraseña: admin123
+```
+
+## 📁 Estructura del Proyecto
+
+```
+GEI_adeptify/
+├── client/                 # Frontend React
+├── server/                 # Backend Node.js
+├── gateway/                # API Gateway
+├── microservices/          # Microservicios
+│   ├── ai-services/        # Servicios de IA
+│   ├── analytics-service/  # Análisis
+│   ├── user-service/       # Usuarios
+│   └── ...
+├── scripts/                # Scripts de instalación
+├── docs/                   # Documentación
+├── database/               # Scripts de base de datos
+├── docker-compose.local.yml # Configuración Docker
+└── requirements.txt        # Dependencias Python
+```
+
+## 🚀 Comandos de Desarrollo
+
+### Iniciar Servicios
+```bash
+# Desarrollo completo
+npm run dev
+
+# Solo servidor
+npm run dev:server
+
+# Solo cliente
+npm run dev:client
+
+# Solo gateway
+npm run dev:gateway
+```
+
+### Testing
+```bash
+# Tests unitarios
+npm run test:unit
+
+# Tests de integración
+npm run test:integration
+
+# Tests E2E
+npm run test:e2e
+
+# Cobertura
+npm run test:coverage
+```
+
+### Build y Deploy
+```bash
+# Build completo
+npm run build
+
+# Build de producción
+npm run build:prod
+
+# Docker
+docker-compose build
+docker-compose up -d
 ```
 
 ## 📚 Documentación
 
-### Archivos Principales
-- **README.md** - Documentación principal
-- **pdr.md** - Plan de desarrollo
-- **MICROTAREAS_XX_COMPLETADAS.md** - Implementación de microtareas
-- **INVENTARIO_COMPLETO_APLICACION.md** - Inventario completo
-
-## 🎯 Características Principales
-
-### ✅ Implementado
-- **17 microservicios** completamente funcionales
-- **Frontend React** con TypeScript
-- **Mobile app** React Native
-- **API Gateway** con funcionalidades avanzadas
-- **Sistema de seguridad** completo
-- **Stack de monitoreo** integral
-- **Infraestructura** Kubernetes/Docker
-- **CI/CD** automatizado
-- **Testing** completo
-
-### 🔄 En Desarrollo
-- **Optimizaciones** de performance
-- **Expansión** de funcionalidades
-- **Mejoras** de seguridad
-- **Nuevas** características de IA
-
-## 📈 Estadísticas del Proyecto
-
-- **Microservicios**: 17 implementados
-- **Líneas de código**: ~50,000+
-- **Archivos TypeScript**: 200+
-- **Tests**: 100+ implementados
-- **Documentación**: 50+ archivos
+- [📖 Guía de Instalación Local](docs/INSTALACION_LOCAL.md)
+- [🔍 Revisión de Dependencias](docs/REVISION_DEPENDENCIAS.md)
+- [🏗️ Arquitectura del Sistema](arquitectura_unificada.md)
+- [🔧 API Documentation](docs/API.md)
+- [🤖 AI Services](docs/AI_API.md)
 
 ## 🤝 Contribución
 
@@ -256,15 +237,25 @@ OPENAI_API_KEY=your-openai-key
 
 Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
-## 👥 Equipo
+## 👥 Autores
 
-- **Desarrollo**: Adeptify Development Team
-- **Arquitectura**: Microservicios y IA
-- **DevOps**: Kubernetes y Docker
-- **Testing**: Cobertura completa
+- **Benet Andújar** - *Desarrollo inicial* - [benetandujar72](https://github.com/benetandujar72)
+
+## 🙏 Agradecimientos
+
+- OpenAI por las APIs de inteligencia artificial
+- Anthropic por Claude API
+- Google por Generative AI
+- La comunidad de desarrolladores de código abierto
+
+## 📞 Soporte
+
+Si tienes problemas con la instalación o configuración:
+
+1. Revisa la [documentación de instalación](docs/INSTALACION_LOCAL.md)
+2. Ejecuta `.\scripts\check-deps.ps1` para verificar dependencias
+3. Abre un issue en GitHub con los detalles del problema
 
 ---
 
-**Estado**: ✅ PRODUCCIÓN READY  
-**Versión**: v1.0.0  
-**Última actualización**: $(date) 
+⭐ **¡No olvides dar una estrella al proyecto si te resulta útil!** 
