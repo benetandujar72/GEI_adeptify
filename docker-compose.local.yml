@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: gei_postgres
+    environment:
+      POSTGRES_DB: gei_adeptify
+      POSTGRES_USER: adeptify_user
+      POSTGRES_PASSWORD: adeptify_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - gei_network
+    restart: unless-stopped
+
+  # MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: gei_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: adeptify_admin
+      MONGO_INITDB_ROOT_PASSWORD: adeptify_password
+      MONGO_INITDB_DATABASE: gei_adeptify
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./database/mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - gei_network
+    restart: unless-stopped
+
+  # Redis para caché y sesiones
+  redis:
+    image: redis:7-alpine
+    container_name: gei_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gei_network
+    restart: unless-stopped
+
+  # SQLite (para desarrollo local)
+  sqlite:
+    image: alpine:latest
+    container_name: gei_sqlite
+    volumes:
+      - ./database/sqlite:/data
+    networks:
+      - gei_network
+    command: sh -c "apk add --no-cache sqlite && tail -f /dev/null"
+
+  # pgAdmin para administrar PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gei_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@adeptify.es
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - gei_network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # MongoDB Express para administrar MongoDB
+  mongo-express:
+    image: mongo-express:latest
+    container_name: gei_mongo_express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: adeptify_admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: adeptify_password
+      ME_CONFIG_MONGODB_URL: mongodb://adeptify_admin:adeptify_password@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    networks:
+      - gei_network
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  gei_network:
+    driver: bridge 
