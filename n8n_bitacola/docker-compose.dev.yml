@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  n8n-dev:
+    image: n8nio/n8n:latest
+    container_name: n8n-adeptify-dev
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_USER_MANAGEMENT_DISABLED=true
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_DATABASE_TYPE=sqlite
+      - N8N_DATABASE_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Madrid
+      - N8N_LOG_LEVEL=debug
+      - N8N_LOG_OUTPUT=console
+      - N8N_METRICS=false
+    volumes:
+      - n8n_dev_data:/home/node/.n8n
+      - ./workflows:/home/node/.n8n/workflows
+      - ./config:/home/node/.n8n/config
+    networks:
+      - n8n-dev-network
+
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: n8n-postgres-dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=n8n_dev
+      - POSTGRES_USER=n8n_dev
+      - POSTGRES_PASSWORD=dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - n8n-dev-network
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: n8n-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - n8n-dev-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: n8n-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - n8n-dev-network
+
+volumes:
+  n8n_dev_data:
+    driver: local
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  n8n-dev-network:
+    driver: bridge

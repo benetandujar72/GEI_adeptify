@@ -1,0 +1,210 @@
+{
+  "name": "Motor d'Avaluació IA - Adeptify.es",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evaluate",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook d'Avaluació",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "evaluation-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar i preparar les dades d'entrada\nconst input = $input.first().json;\n\n// Validar que tenim les dades necessàries\nif (!input.attachments || input.attachments.length === 0) {\n  throw new Error('No s\'han trobat adjunts per avaluar');\n}\n\n// Preparar les dades per a l'avaluació\nconst evaluationData = {\n  emailId: input.id,\n  studentEmail: input.from,\n  studentName: input.fromName,\n  subject: input.subject,\n  submissionDate: input.date,\n  attachments: input.attachments,\n  metadata: {\n    workflow: 'evaluation-engine',\n    version: '1.0',\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [evaluationData];"
+      },
+      "id": "prepare-evaluation",
+      "name": "Preparar Avaluació",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraure i processar el contingut dels adjunts\nconst evaluationData = $input.first().json;\nconst processedAttachments = [];\n\nfor (const attachment of evaluationData.attachments) {\n  let content = '';\n  \n  // Processar segons el tipus de fitxer\n  if (attachment.contentType.includes('pdf')) {\n    // Per a PDFs, necessitaríem una API específica\n    content = `[PDF] ${attachment.filename} - Mida: ${attachment.size} bytes`;\n  } else if (attachment.contentType.includes('text')) {\n    // Per a fitxers de text\n    content = Buffer.from(attachment.data, 'base64').toString('utf-8');\n  } else if (attachment.contentType.includes('word') || attachment.contentType.includes('document')) {\n    // Per a documents Word\n    content = `[DOC] ${attachment.filename} - Mida: ${attachment.size} bytes`;\n  } else {\n    content = `[Fitxer] ${attachment.filename} - Tipus: ${attachment.contentType}`;\n  }\n  \n  processedAttachments.push({\n    filename: attachment.filename,\n    contentType: attachment.contentType,\n    size: attachment.size,\n    content: content,\n    processedAt: new Date().toISOString()\n  });\n}\n\nreturn [{\n  ...evaluationData,\n  processedAttachments: processedAttachments\n}];"
+      },
+      "id": "extract-content",
+      "name": "Extraure Contingut",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Ets un professor expert en avaluació educativa. La teva tasca és avaluar treballs d'alumnes de manera objectiva i constructiva. Utilitza aquests criteris:\n\n1. **Qualitat del contingut** (0-10)\n2. **Estructura i organització** (0-10)\n3. **Creativitat i originalitat** (0-10)\n4. **Cumpliment dels objectius** (0-10)\n5. **Presentació i format** (0-10)\n\nProporciona:\n- Puntuació global (mitjana)\n- Comentaris detallats per a cada criteri\n- Suggeriments d'millorament\n- Feedback constructiu i motivador\n\nRespon sempre en català."
+            },
+            {
+              "role": "user",
+              "content": "Avalua aquest treball:\n\n**Estudiant:** {{ $json.studentName }}\n**Assignatura:** {{ $json.subject }}\n**Data de lliurament:** {{ $json.submissionDate }}\n\n**Contingut del treball:**\n{{ $json.processedAttachments.map(att => `\\n--- ${att.filename} ---\\n${att.content}`).join('\\n') }}\n\nProporciona una avaluació completa seguint els criteris especificats."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2000
+        }
+      },
+      "id": "ai-evaluation",
+      "name": "Avaluació IA",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Processar la resposta de l'IA i estructurar l'avaluació\nconst aiResponse = $input.first().json;\nconst evaluationData = $('Preparar Avaluació').first().json;\n\n// Extraure la puntuació i comentaris de la resposta de l'IA\nconst evaluationText = aiResponse.choices[0].message.content;\n\n// Crear objecte estructurat d'avaluació\nconst structuredEvaluation = {\n  emailId: evaluationData.emailId,\n  studentEmail: evaluationData.studentEmail,\n  studentName: evaluationData.studentName,\n  subject: evaluationData.subject,\n  submissionDate: evaluationData.submissionDate,\n  evaluationDate: new Date().toISOString(),\n  aiResponse: evaluationText,\n  metadata: {\n    workflow: 'evaluation-engine',\n    version: '1.0',\n    model: 'gpt-4',\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [structuredEvaluation];"
+      },
+      "id": "structure-evaluation",
+      "name": "Estructurar Avaluació",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "execution",
+        "body": "={{ $json }}",
+        "options": {
+          "waitForWebhook": false
+        }
+      },
+      "id": "trigger-feedback",
+      "name": "Activar Feedback",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "credentials": {
+        "n8nApi": {
+          "id": "n8n-api-credentials",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "resource": "evaluations",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_id": "={{ $json.emailId }}",
+            "student_email": "={{ $json.studentEmail }}",
+            "student_name": "={{ $json.studentName }}",
+            "subject": "={{ $json.subject }}",
+            "submission_date": "={{ $json.submissionDate }}",
+            "evaluation_date": "={{ $json.evaluationDate }}",
+            "ai_response": "={{ $json.aiResponse }}",
+            "metadata": "={{ JSON.stringify($json.metadata) }}"
+          }
+        }
+      },
+      "id": "save-evaluation",
+      "name": "Desar Avaluació",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 500],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook d'Avaluació": {
+      "main": [
+        [
+          {
+            "node": "Preparar Avaluació",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Avaluació": {
+      "main": [
+        [
+          {
+            "node": "Extraure Contingut",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraure Contingut": {
+      "main": [
+        [
+          {
+            "node": "Avaluació IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avaluació IA": {
+      "main": [
+        [
+          {
+            "node": "Estructurar Avaluació",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estructurar Avaluació": {
+      "main": [
+        [
+          {
+            "node": "Activar Feedback",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Desar Avaluació",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "evaluation-engine",
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "evaluation-engine-tag",
+      "name": "Adeptify"
+    }
+  ]
+}

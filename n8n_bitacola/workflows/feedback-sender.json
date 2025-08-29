@@ -1,0 +1,204 @@
+{
+  "name": "Enviador de Feedback - Adeptify.es",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-feedback",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook de Feedback",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "feedback-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar les dades per a l'enviament de feedback\nconst evaluation = $input.first().json;\n\n// Crear plantilla d'email personalitzada\nconst emailTemplate = {\n  to: evaluation.studentEmail,\n  subject: `Avaluació del teu treball - ${evaluation.subject}`,\n  template: 'feedback-template',\n  data: {\n    studentName: evaluation.studentName,\n    subject: evaluation.subject,\n    submissionDate: evaluation.submissionDate,\n    evaluationDate: evaluation.evaluationDate,\n    aiResponse: evaluation.aiResponse,\n    metadata: evaluation.metadata\n  }\n};\n\nreturn [emailTemplate];"
+      },
+      "id": "prepare-feedback",
+      "name": "Preparar Feedback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar el contingut HTML de l'email de feedback\nconst emailData = $input.first().json;\nconst data = emailData.data;\n\n// Plantilla HTML per a l'email\nconst htmlTemplate = `\n<!DOCTYPE html>\n<html lang=\"ca\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Avaluació del teu treball</title>\n    <style>\n        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n        .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }\n        .evaluation { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #667eea; }\n        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }\n        .highlight { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; }\n        .button { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h1>📚 Avaluació del teu treball</h1>\n            <p>Adeptify.es - Plataforma Educativa</p>\n        </div>\n        \n        <div class=\"content\">\n            <h2>Hola ${data.studentName},</h2>\n            \n            <p>Hem rebut i avaluat el teu treball per a l'assignatura <strong>${data.subject}</strong>.</p>\n            \n            <div class=\"highlight\">\n                <strong>📅 Data de lliurament:</strong> ${new Date(data.submissionDate).toLocaleDateString('ca-ES')}<br>\n                <strong>📅 Data d'avaluació:</strong> ${new Date(data.evaluationDate).toLocaleDateString('ca-ES')}\n            </div>\n            \n            <div class=\"evaluation\">\n                <h3>📋 Avaluació detallada:</h3>\n                <div style=\"white-space: pre-wrap;\">${data.aiResponse}</div>\n            </div>\n            \n            <p>Recorda que aquesta avaluació té com a objectiu ajudar-te a millorar i aprendre. Si tens alguna pregunta sobre la teva avaluació, no dubtis a contactar amb el teu professor.</p>\n            \n            <p>Continua treballant amb entusiasme! 💪</p>\n            \n            <p>Salutacions,<br>\n            <strong>Equip d'Adeptify.es</strong></p>\n        </div>\n        \n        <div class=\"footer\">\n            <p>© 2024 Adeptify.es - Tots els drets reservats</p>\n            <p>Aquest email ha estat generat automàticament pel sistema d'avaluació.</p>\n        </div>\n    </div>\n</body>\n</html>`;\n\n// Crear versió de text pla\nconst textTemplate = `\nAVALUACIÓ DEL TEU TREBALL - Adeptify.es\n=====================================\n\nHola ${data.studentName},\n\nHem rebut i avaluat el teu treball per a l'assignatura: ${data.subject}\n\nData de lliurament: ${new Date(data.submissionDate).toLocaleDateString('ca-ES')}\nData d'avaluació: ${new Date(data.evaluationDate).toLocaleDateString('ca-ES')}\n\nAVALUACIÓ DETALLADA:\n${data.aiResponse}\n\nRecorda que aquesta avaluació té com a objectiu ajudar-te a millorar i aprendre.\n\nSalutacions,\nEquip d'Adeptify.es\n\n© 2024 Adeptify.es - Tots els drets reservats`;\n\nreturn [{\n  ...emailData,\n  htmlContent: htmlTemplate,\n  textContent: textTemplate\n}];"
+      },
+      "id": "generate-email",
+      "name": "Generar Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n@adeptify.es",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.textContent }}",
+        "html": "={{ $json.htmlContent }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Enviar Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Adeptify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "resource": "feedback_sent",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_id": "={{ $('Preparar Feedback').first().json.data.metadata.emailId }}",
+            "student_email": "={{ $('Preparar Feedback').first().json.to }}",
+            "subject": "={{ $('Preparar Feedback').first().json.subject }}",
+            "sent_date": "={{ new Date().toISOString() }}",
+            "status": "sent",
+            "metadata": "={{ JSON.stringify($('Preparar Feedback').first().json.data.metadata) }}"
+          }
+        }
+      },
+      "id": "log-feedback",
+      "name": "Registrar Feedback",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Crear notificació per al professor\nconst feedbackData = $('Preparar Feedback').first().json;\nconst emailResult = $('Enviar Email').first().json;\n\nconst notification = {\n  type: 'feedback_sent',\n  title: 'Feedback enviat amb èxit',\n  message: `S'ha enviat el feedback a ${feedbackData.to} per al treball de ${feedbackData.data.subject}`,\n  data: {\n    studentEmail: feedbackData.to,\n    studentName: feedbackData.data.studentName,\n    subject: feedbackData.data.subject,\n    sentAt: new Date().toISOString(),\n    emailId: emailResult.messageId\n  },\n  metadata: {\n    workflow: 'feedback-sender',\n    version: '1.0',\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [notification];"
+      },
+      "id": "create-notification",
+      "name": "Crear Notificació",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "resource": "notifications",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "type": "={{ $json.type }}",
+            "title": "={{ $json.title }}",
+            "message": "={{ $json.message }}",
+            "data": "={{ JSON.stringify($json.data) }}",
+            "created_at": "={{ new Date().toISOString() }}",
+            "metadata": "={{ JSON.stringify($json.metadata) }}"
+          }
+        }
+      },
+      "id": "save-notification",
+      "name": "Desar Notificació",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook de Feedback": {
+      "main": [
+        [
+          {
+            "node": "Preparar Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Feedback": {
+      "main": [
+        [
+          {
+            "node": "Generar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Email": {
+      "main": [
+        [
+          {
+            "node": "Enviar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Email": {
+      "main": [
+        [
+          {
+            "node": "Registrar Feedback",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Crear Notificació",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Notificació": {
+      "main": [
+        [
+          {
+            "node": "Desar Notificació",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "feedback-sender",
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "feedback-sender-tag",
+      "name": "Adeptify"
+    }
+  ]
+}

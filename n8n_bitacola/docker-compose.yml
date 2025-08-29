@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-adeptify
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=n8n.adeptify.es
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - N8N_USER_MANAGEMENT_DISABLED=false
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-adeptify2024}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_DATABASE_TYPE=postgresdb
+      - N8N_DATABASE_POSTGRESDB_HOST=postgres
+      - N8N_DATABASE_POSTGRESDB_PORT=5432
+      - N8N_DATABASE_POSTGRESDB_DATABASE=n8n
+      - N8N_DATABASE_POSTGRESDB_USER=n8n
+      - N8N_DATABASE_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - N8N_EMAIL_MODE=smtp
+      - N8N_EMAIL_SMTP_HOST=${SMTP_HOST}
+      - N8N_EMAIL_SMTP_PORT=${SMTP_PORT}
+      - N8N_EMAIL_SMTP_USER=${SMTP_USER}
+      - N8N_EMAIL_SMTP_PASS=${SMTP_PASS}
+      - N8N_EMAIL_SMTP_SENDER=${SMTP_SENDER}
+      - WEBHOOK_URL=https://n8n.adeptify.es/
+      - GENERIC_TIMEZONE=Europe/Madrid
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=console
+      - N8N_METRICS=true
+      - N8N_METRICS_PREFIX=n8n_adeptify
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/home/node/.n8n/workflows
+      - ./config:/home/node/.n8n/config
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - n8n-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_NON_ROOT_USER=n8n
+      - POSTGRES_NON_ROOT_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - n8n-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: n8n-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - n8n-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: n8n-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/sites-enabled:/etc/nginx/sites-enabled
+    depends_on:
+      - n8n
+    networks:
+      - n8n-network
+
+  backup:
+    image: postgres:15-alpine
+    container_name: n8n-backup
+    restart: "no"
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    command: |
+      sh -c '
+        pg_dump -h postgres -U n8n -d n8n > /backups/n8n_backup_$$(date +%Y%m%d_%H%M%S).sql
+        find /backups -name "*.sql" -mtime +7 -delete
+      '
+    depends_on:
+      - postgres
+    networks:
+      - n8n-network
+
+volumes:
+  n8n_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  n8n-network:
+    driver: bridge

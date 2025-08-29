@@ -1,0 +1,200 @@
+{
+  "name": "Processador d'Emails - Adeptify.es",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "options": {
+          "downloadAttachments": true,
+          "markAsRead": true,
+          "readReceipt": false,
+          "simple": false
+        }
+      },
+      "id": "email-trigger",
+      "name": "Trigger d'Email",
+      "type": "n8n-nodes-base.emailTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "credentials": {
+        "imap": {
+          "id": "imap-credentials",
+          "name": "IMAP Adeptify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-attachments",
+              "leftValue": "={{ $json.attachments.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "from-student",
+              "leftValue": "={{ $json.from.address }}",
+              "rightValue": "@adeptify.es",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-emails",
+      "name": "Filtrar Emails",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraure informació de l'email i els adjunts\nconst email = $input.first().json;\n\n// Crear objecte amb la informació processada\nconst processedEmail = {\n  id: email.id,\n  subject: email.subject,\n  from: email.from.address,\n  fromName: email.from.name,\n  date: email.date,\n  text: email.text,\n  html: email.html,\n  attachments: email.attachments.map(attachment => ({\n    filename: attachment.filename,\n    contentType: attachment.contentType,\n    size: attachment.size,\n    data: attachment.data\n  })),\n  metadata: {\n    processedAt: new Date().toISOString(),\n    workflow: 'email-processor',\n    version: '1.0'\n  }\n};\n\n// Validar que és un treball vàlid\nconst validExtensions = ['.pdf', '.doc', '.docx', '.txt', '.zip', '.rar'];\nconst hasValidAttachment = processedEmail.attachments.some(att => \n  validExtensions.some(ext => att.filename.toLowerCase().endsWith(ext))\n);\n\nif (!hasValidAttachment) {\n  throw new Error('No s\'han trobat adjunts vàlids al treball');\n}\n\nreturn [processedEmail];"
+      },
+      "id": "process-email",
+      "name": "Processar Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "execution",
+        "body": "={{ $json }}",
+        "options": {
+          "waitForWebhook": false
+        }
+      },
+      "id": "trigger-evaluation",
+      "name": "Activar Avaluació",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "n8nApi": {
+          "id": "n8n-api-credentials",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "execution",
+        "body": "={{ $json }}",
+        "options": {
+          "waitForWebhook": false
+        }
+      },
+      "id": "trigger-notification",
+      "name": "Activar Notificació",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [900, 500],
+      "credentials": {
+        "n8nApi": {
+          "id": "n8n-api-credentials",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Registrar l'execució a la base de dades\nconst execution = $input.first().json;\n\n// Crear registre d'execució\nconst executionRecord = {\n  workflowId: 'email-processor',\n  executionId: execution.id,\n  status: 'completed',\n  timestamp: new Date().toISOString(),\n  data: {\n    emailId: execution.data.id,\n    subject: execution.data.subject,\n    from: execution.data.from,\n    attachmentsCount: execution.data.attachments.length\n  }\n};\n\nreturn [executionRecord];"
+      },
+      "id": "log-execution",
+      "name": "Registrar Execució",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Trigger d'Email": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Emails": {
+      "main": [
+        [
+          {
+            "node": "Processar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Email": {
+      "main": [
+        [
+          {
+            "node": "Activar Avaluació",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Activar Notificació",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Activar Avaluació": {
+      "main": [
+        [
+          {
+            "node": "Registrar Execució",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "email-processor",
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "email-processor-tag",
+      "name": "Adeptify"
+    }
+  ]
+}
