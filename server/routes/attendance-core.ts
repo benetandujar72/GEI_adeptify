@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { attendanceService } from '../services/attendance-service.js';
 import { isAuthenticated, requireRole } from '../middleware/auth.js';
 import { publishEvent } from '../src/services/events';
-import { EventTopics } from '../shared/events';
+import { EventTopics } from '../../shared/events';
 
 const router = Router();
 
