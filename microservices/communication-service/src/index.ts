@@ -10,6 +10,8 @@ import { logger } from './utils/logger';
 import { checkConnection, initializeTables } from './database';
 import communicationRoutes from './routes/communication.routes';
 import { setupWebSocket } from './websocket/socket';
+import { EventBus } from '../../../shared/event-bus';
+import { EventTopics } from '../../../shared/events';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -25,6 +27,7 @@ const io = new SocketIOServer(server, {
 });
 
 const PORT = process.env.PORT || 3005;
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // ===== MIDDLEWARE DE SEGURIDAD =====
 
@@ -110,6 +113,9 @@ app.get('/health', async (req, res) => {
       uptime: process.uptime(),
       database: dbConnected ? 'connected' : 'disconnected',
       websocket: 'active',
+      events: {
+        redis: !!REDIS_URL,
+      },
       version: process.env.npm_package_version || '1.0.0',
       environment: process.env.NODE_ENV || 'development'
     });
@@ -199,6 +205,16 @@ async function startServer() {
       logger.info(`📊 Health check: http://localhost:${PORT}/health`);
       logger.info(`🔌 WebSocket: ws://localhost:${PORT}`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+
+    // Suscriptor de eventos básicos (broadcast requested)
+    const bus = new EventBus({ url: REDIS_URL, consumerGroup: 'communication-service' });
+    await bus.connect();
+    await bus.subscribe(EventTopics.communications, 'communication-consumer', async (event) => {
+      if (event.name === 'communication.broadcast.requested') {
+        logger.info('Processing broadcast request', { id: event.id });
+        // Aquí podría invocarse lógica de envío multi-canal
+      }
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
