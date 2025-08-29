@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { attendanceService } from '../services/attendance-service.js';
 import { isAuthenticated, requireRole } from '../middleware/auth.js';
+import { publishEvent } from '../src/services/events';
+import { EventTopics } from '../shared/events';
 
 const router = Router();
 
@@ -42,6 +44,21 @@ router.post('/record', isAuthenticated, requireRole(['teacher', 'admin', 'instit
     const user = req.user as any;
 
     const record = await attendanceService.recordAttendance(data);
+
+    // Publicar evento de asistencia individual
+    await publishEvent(
+      EventTopics.attendance,
+      'attendance.marked',
+      {
+        classId: data.classId,
+        studentId: data.studentId,
+        date: data.date,
+        status: data.status,
+      },
+      {
+        actor: { userId: (user?.id || '').toString(), role: user?.role },
+      }
+    );
 
     res.status(201).json({
       success: true,
@@ -84,6 +101,20 @@ router.post('/bulk', isAuthenticated, requireRole(['teacher', 'admin', 'institut
       data.classId,
       data.date,
       data.records
+    );
+
+    // Publicar evento de asistencia masiva
+    await publishEvent(
+      EventTopics.attendance,
+      'attendance.bulk_marked',
+      {
+        classId: data.classId,
+        date: data.date,
+        count: records.length,
+      },
+      {
+        actor: { userId: (user?.id || '').toString(), role: user?.role },
+      }
     );
 
     res.status(201).json({

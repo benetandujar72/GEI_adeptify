@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { assistatutService } from '../services/assistatut-service.js';
+import { publishEvent } from '../src/services/events';
+import { EventTopics } from '../shared/events';
 
 const router = Router();
 
@@ -64,6 +66,20 @@ router.post('/guard-duties', async (req, res) => {
   try {
     const validatedData = guardDutySchema.parse(req.body);
     const guardDuty = await assistatutService.createGuardDuty(validatedData);
+
+    // Publicar evento de guardia creada
+    await publishEvent(
+      EventTopics.guards,
+      'guard.assignment.created',
+      {
+        assignmentId: String(guardDuty.id),
+        scheduleId: 'unknown',
+        date: validatedData.date.split('T')[0],
+        fromTeacherId: String(validatedData.teacherId),
+        substituteTeacherId: undefined,
+        status: 'assigned',
+      }
+    );
     res.status(201).json({
       message: 'Guardia asignada exitosamente',
       data: guardDuty

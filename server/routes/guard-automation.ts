@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { guardAutomationService } from '../services/guard-automation-service.js';
+import { publishEvent } from '../src/services/events';
+import { EventTopics } from '../shared/events';
 import { isAuthenticated, requireRole } from '../middleware/auth.js';
 
 const router = Router();
@@ -35,6 +37,28 @@ router.post('/assign-for-activity/:activityId', isAuthenticated, requireRole(['a
     logger.info(`🏫 Iniciando assignació automàtica de guàrdies per activitat ${activityId}`);
     
     const result = await guardAutomationService.assignGuardDutiesForActivity(parseInt(activityId));
+
+    // Emitir eventos por cada guardia asignada/pendiente
+    for (const d of result.details) {
+      if (d.status === 'assigned') {
+        await publishEvent(EventTopics.guards, 'guard.assignment.created', {
+          assignmentId: String(d.guardId),
+          scheduleId: 'unknown',
+          date: new Date().toISOString().split('T')[0],
+          fromTeacherId: 'unknown',
+          substituteTeacherId: undefined,
+          status: 'assigned',
+        });
+      } else {
+        await publishEvent(EventTopics.guards, 'guard.assignment.failed', {
+          assignmentId: String(d.guardId),
+          scheduleId: 'unknown',
+          date: new Date().toISOString().split('T')[0],
+          fromTeacherId: 'unknown',
+          status: 'failed',
+        });
+      }
+    }
     
     res.json({
       success: true,
