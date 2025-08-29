@@ -137,3 +137,6 @@ docker-compose.override.yml
 .nuxt/
 dist/
 build/
+FitxaControl/
+n8n_bitacola/adeptify-admin-app/
+AppValoracionsIB/
