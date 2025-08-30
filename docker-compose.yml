@@ -57,9 +57,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - .:/app
-      - /app/node_modules
+    # Volúmenes comentados para producción - usar archivos construidos
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
     command: npm start
 
   # Nginx para proxy reverso (opcional)
