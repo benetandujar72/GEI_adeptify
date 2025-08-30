@@ -1,7 +1,16 @@
 import { Router } from 'express';
 import { logger } from '../utils/logger.js';
+import postgres from 'postgres';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
+
+// Configuración de la base de datos
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
+const sql = postgres(DATABASE_URL, { 
+  max: 10,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
 // TEMPORAL: Almacén de sesiones en memoria
 const sessionStore = new Map();
@@ -55,54 +64,72 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // Por ahora, solo aceptamos el superadmin con credenciales hardcoded
-    if ((userIdentifier === 'superadmin@gei.es' || userIdentifier === 'superadmin') && 
-        password === 'password123') {
-      
-      logger.info('✅ Login exitoso para super admin');
-      
-      // Generar session ID único
-      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Crear sesión en nuestro almacén
-      const sessionData = {
-        userId: "1",
-        userEmail: 'superadmin@gei.es',
-        userRole: 'super_admin',
-        createdAt: new Date().toISOString()
-      };
-      
-      sessionStore.set(sessionId, sessionData);
-      logger.info(`✅ Sesión creada con ID: ${sessionId}`);
-      
-      // Establecer cookie de sesión manualmente
-      setCookie(res, 'sessionId', sessionId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 24 * 60 * 60, // 24 horas en segundos
-        path: '/'
-      });
-      
-      return res.json({ 
-        success: true,
-        user: {
-          id: "1",
-          email: 'superadmin@gei.es',
-          displayName: 'Super Administrador',
-          firstName: 'Super',
-          lastName: 'Admin',
-          role: 'super_admin',
-          instituteId: null
-        }
+    // Buscar usuario en la base de datos
+    logger.info('🔍 Buscando usuario en la base de datos...');
+    const users = await sql`
+      SELECT id, email, display_name, first_name, last_name, role, password_hash, institute_id
+      FROM users 
+      WHERE email = ${userIdentifier} AND is_active = true
+    `;
+    
+    if (users.length === 0) {
+      logger.warn(`❌ Usuario no encontrado: ${userIdentifier}`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Credenciales incorrectas' 
       });
     }
     
-    // Para otros usuarios, devolver error temporal
-    logger.warn(`❌ Usuario no encontrado o credenciales incorrectas: ${userIdentifier}`);
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Credenciales incorrectas' 
+    const user = users[0];
+    logger.info(`✅ Usuario encontrado: ${user.display_name} (${user.role})`);
+    
+    // Verificar contraseña
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isPasswordValid) {
+      logger.warn(`❌ Contraseña incorrecta para: ${userIdentifier}`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Credenciales incorrectas' 
+      });
+    }
+    
+    logger.info('✅ Contraseña válida');
+    
+    // Generar session ID único
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear sesión en nuestro almacén
+    const sessionData = {
+      userId: user.id.toString(),
+      userEmail: user.email,
+      userRole: user.role,
+      createdAt: new Date().toISOString()
+    };
+    
+    sessionStore.set(sessionId, sessionData);
+    logger.info(`✅ Sesión creada con ID: ${sessionId}`);
+    
+    // Establecer cookie de sesión manualmente
+    setCookie(res, 'sessionId', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 24 * 60 * 60, // 24 horas en segundos
+      path: '/'
+    });
+    
+    return res.json({ 
+      success: true,
+      user: {
+        id: user.id.toString(),
+        email: user.email,
+        displayName: user.display_name,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        instituteId: user.institute_id
+      }
     });
     
   } catch (error) {
@@ -168,59 +195,84 @@ router.get('/google/callback', (req, res) => {
 });
 
 // Get current user
-router.get('/me', (req, res) => {
-  logger.info('Auth /me endpoint called');
-  
-  // Obtener sessionId de la cookie manualmente
-  const cookies = parseCookies(req.headers.cookie);
-  const sessionId = cookies.sessionId;
-  logger.info(`📋 SessionId de cookie: ${sessionId}`);
-  
-  if (!sessionId) {
-    logger.info('❌ No hay sessionId en la cookie');
-    return res.status(401).json({ 
-      message: 'No autenticado - No sessionId',
-      sessionExists: false
-    });
-  }
-  
-  // Buscar sesión en nuestro almacén
-  const sessionData = sessionStore.get(sessionId);
-  logger.info(`📋 Datos de sesión encontrados: ${JSON.stringify(sessionData)}`);
-  
-  if (!sessionData) {
-    logger.info('❌ Sesión no encontrada en el almacén');
-    return res.status(401).json({ 
-      message: 'No autenticado - Sesión no encontrada',
-      sessionId: sessionId
-    });
-  }
-  
-  // Verificar si la sesión no ha expirado (24 horas)
-  const sessionAge = Date.now() - new Date(sessionData.createdAt).getTime();
-  const maxAge = 24 * 60 * 60 * 1000; // 24 horas
-  
-  if (sessionAge > maxAge) {
-    logger.info('❌ Sesión expirada');
-    sessionStore.delete(sessionId);
-    return res.status(401).json({ 
-      message: 'Sesión expirada',
-      sessionId: sessionId
-    });
-  }
-  
-  logger.info('✅ Usuario autenticado encontrado en sesión');
-  return res.json({
-    user: {
-      id: sessionData.userId,
-      email: sessionData.userEmail,
-      displayName: 'Super Administrador',
-      firstName: 'Super',
-      lastName: 'Admin',
-      role: sessionData.userRole,
-      instituteId: null
+router.get('/me', async (req, res) => {
+  try {
+    logger.info('Auth /me endpoint called');
+    
+    // Obtener sessionId de la cookie manualmente
+    const cookies = parseCookies(req.headers.cookie);
+    const sessionId = cookies.sessionId;
+    logger.info(`📋 SessionId de cookie: ${sessionId}`);
+    
+    if (!sessionId) {
+      logger.info('❌ No hay sessionId en la cookie');
+      return res.status(401).json({ 
+        message: 'No autenticado - No sessionId',
+        sessionExists: false
+      });
     }
-  });
+    
+    // Buscar sesión en nuestro almacén
+    const sessionData = sessionStore.get(sessionId);
+    logger.info(`📋 Datos de sesión encontrados: ${JSON.stringify(sessionData)}`);
+    
+    if (!sessionData) {
+      logger.info('❌ Sesión no encontrada en el almacén');
+      return res.status(401).json({ 
+        message: 'No autenticado - Sesión no encontrada',
+        sessionId: sessionId
+      });
+    }
+    
+    // Verificar si la sesión no ha expirado (24 horas)
+    const sessionAge = Date.now() - new Date(sessionData.createdAt).getTime();
+    const maxAge = 24 * 60 * 60 * 1000; // 24 horas
+    
+    if (sessionAge > maxAge) {
+      logger.info('❌ Sesión expirada');
+      sessionStore.delete(sessionId);
+      return res.status(401).json({ 
+        message: 'Sesión expirada',
+        sessionId: sessionId
+      });
+    }
+    
+    // Obtener datos actualizados del usuario desde la base de datos
+    const users = await sql`
+      SELECT id, email, display_name, first_name, last_name, role, institute_id
+      FROM users 
+      WHERE id = ${sessionData.userId} AND is_active = true
+    `;
+    
+    if (users.length === 0) {
+      logger.info('❌ Usuario no encontrado en la base de datos');
+      sessionStore.delete(sessionId);
+      return res.status(401).json({ 
+        message: 'Usuario no encontrado',
+        sessionId: sessionId
+      });
+    }
+    
+    const user = users[0];
+    logger.info('✅ Usuario autenticado encontrado en sesión y base de datos');
+    return res.json({
+      user: {
+        id: user.id.toString(),
+        email: user.email,
+        displayName: user.display_name,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        instituteId: user.institute_id
+      }
+    });
+  } catch (error) {
+    logger.error('❌ Error en /me endpoint:', error);
+    res.status(500).json({ 
+      message: 'Error interno del servidor',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 export default router; 
