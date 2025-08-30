@@ -70,7 +70,7 @@ try {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   
   // Verificar si existen archivos estáticos del cliente
-  const clientDistPath = join(__dirname, '..', 'dist', 'client');
+  const clientDistPath = join(__dirname, '..', 'client', 'dist');
   const indexHtmlPath = join(clientDistPath, 'index.html');
   
   if (existsSync(clientDistPath)) {
@@ -698,7 +698,10 @@ try {
         message: 'GEI Unified Platform - Servidor funcionando',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
-        note: 'Frontend no encontrado, solo API disponible'
+        note: 'Frontend no encontrado, solo API disponible',
+        clientPath: clientDistPath,
+        indexPath: indexHtmlPath,
+        exists: existsSync(clientDistPath)
       });
     }
   });

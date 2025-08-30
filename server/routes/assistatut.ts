@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { assistatutService } from '../services/assistatut-service.js';
 import { publishEvent } from '../src/services/events';
-import { EventTopics } from '../shared/events';
+import { EventTopics } from '../../shared/events';
 
 const router = Router();
 

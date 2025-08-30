@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { guardAutomationService } from '../services/guard-automation-service.js';
 import { publishEvent } from '../src/services/events';
-import { EventTopics } from '../shared/events';
+import { EventTopics } from '../../shared/events';
 import { isAuthenticated, requireRole } from '../middleware/auth.js';
 
 const router = Router();

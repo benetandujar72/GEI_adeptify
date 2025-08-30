@@ -1,5 +1,5 @@
-import { EventBus } from '../../shared/event-bus';
-import type { EventTopic, DomainEventName } from '../../shared/events';
+import { EventBus } from '../../../shared/event-bus';
+import type { EventTopic, DomainEventName } from '../../../shared/events';
 
 let singletonBus: EventBus | null = null;
 

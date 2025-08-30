@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # Base de datos PostgreSQL
@@ -41,7 +41,7 @@ services:
       dockerfile: Dockerfile
     container_name: gei-unified-platform
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       DATABASE_URL: postgresql://gei_user:gei_password@postgres:5432/gei_unified
       REDIS_URL: redis://redis:6379
       SESSION_SECRET: dev-secret-key-change-in-production
@@ -60,7 +60,7 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    command: npm run dev
+    command: npm start
 
   # Nginx para proxy reverso (opcional)
   nginx:
