@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 
-// Script para crear un usuario administrador
-import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,228 +12,335 @@ const __dirname = dirname(__filename);
 // Cargar variables de entorno
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
-console.log('👤 CREANDO USUARIO ADMINISTRADOR');
-console.log('================================');
+console.log('🔧 === CREANDO USUARIO ADMINISTRADOR ===');
 
-async function createAdminUser() {
-  try {
-    // Verificar variables de entorno
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL no está definida en las variables de entorno');
-    }
+// Configuración de la base de datos
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
 
-    console.log('📡 Conectando a la base de datos...');
-    
-    // Crear conexión a la base de datos
-    const sql = postgres(databaseUrl, { 
-      max: 1,
-      ssl: {
-        rejectUnauthorized: false
-      }
-    });
-    const db = drizzle(sql);
+let sql;
 
-    // Verificar que las tablas existan
-    console.log('🔍 Verificando estructura de la base de datos...');
-    
-    const tables = await sql`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_type = 'BASE TABLE'
-      AND table_name = 'users'
-      ORDER BY table_name;
-    `;
+try {
+  // Conectar a la base de datos
+  sql = postgres(DATABASE_URL, { 
+    max: 10,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  });
+  
+  console.log('✅ Conexión a base de datos establecida');
 
-    if (tables.length === 0) {
-      throw new Error('La tabla users no existe. Ejecuta primero: npm run db:create-tables');
-    }
+  // Crear tablas si no existen
+  console.log('📋 Creando tablas...');
+  
+  // Tabla de institutos
+  await sql`
+    CREATE TABLE IF NOT EXISTS institutes (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      address TEXT,
+      phone VARCHAR(50),
+      email VARCHAR(255),
+      website VARCHAR(255),
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
 
-    console.log('✅ Tabla users encontrada');
+  // Tabla de usuarios
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      display_name VARCHAR(255) NOT NULL,
+      first_name VARCHAR(100),
+      last_name VARCHAR(100),
+      role VARCHAR(50) NOT NULL DEFAULT 'student',
+      password_hash VARCHAR(255) NOT NULL,
+      is_active BOOLEAN DEFAULT true,
+      institute_id INTEGER REFERENCES institutes(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
 
-    // Verificar si ya existe un usuario administrador
-    const existingAdmin = await sql`
-      SELECT id, email, display_name, role 
-      FROM users 
-      WHERE role = 'super_admin' 
-      OR email = 'admin@gei.adeptify.es'
-      LIMIT 1;
-    `;
+  // Tabla de cursos
+  await sql`
+    CREATE TABLE IF NOT EXISTS courses (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      description TEXT,
+      academic_year INTEGER NOT NULL,
+      semester INTEGER DEFAULT 1,
+      credits INTEGER DEFAULT 0,
+      institute_id INTEGER REFERENCES institutes(id),
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
 
-    if (existingAdmin.length > 0) {
-      console.log('⚠️ Ya existe un usuario administrador:');
-      console.log(`   Email: ${existingAdmin[0].email}`);
-      console.log(`   Nombre: ${existingAdmin[0].display_name}`);
-      console.log(`   Rol: ${existingAdmin[0].role}`);
-      console.log('\n💡 Credenciales para login:');
-      console.log('   Email: admin@gei.adeptify.es');
-      console.log('   Contraseña: admin123');
-      return;
-    }
+  // Tabla de competencias
+  await sql`
+    CREATE TABLE IF NOT EXISTS competencies (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      code VARCHAR(50) NOT NULL,
+      description TEXT,
+      level VARCHAR(50) DEFAULT 'básico',
+      weight DECIMAL(3,2) DEFAULT 1.00,
+      course_id INTEGER REFERENCES courses(id),
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
 
-    // Crear hash de la contraseña
-    const password = 'admin123';
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+  // Tabla de criterios
+  await sql`
+    CREATE TABLE IF NOT EXISTS criteria (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      max_score DECIMAL(5,2) DEFAULT 10.00,
+      weight DECIMAL(3,2) DEFAULT 1.00,
+      competency_id INTEGER REFERENCES competencies(id),
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
 
-    // Obtener el primer instituto (o crear uno si no existe)
-    let instituteId;
-    const institutes = await sql`SELECT id FROM institutes LIMIT 1`;
-    
-    if (institutes.length === 0) {
-      console.log('⚠️ No se encontraron institutos, creando uno...');
-      const newInstitute = await sql`
-        INSERT INTO institutes (name, code, address, phone, email, website, is_active)
-        VALUES ('Instituto Demo', 'DEMO001', 'Calle Demo 123', '+34 123 456 789', 'info@institutodemo.es', 'https://institutodemo.es', true)
-        RETURNING id;
-      `;
-      instituteId = newInstitute[0].id;
-      console.log(`✅ Instituto creado con ID: ${instituteId}`);
-    } else {
-      instituteId = institutes[0].id;
-      console.log(`✅ Usando instituto existente con ID: ${instituteId}`);
-    }
+  // Tabla de evaluaciones
+  await sql`
+    CREATE TABLE IF NOT EXISTS evaluations (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      type VARCHAR(50) NOT NULL,
+      date DATE NOT NULL,
+      max_score DECIMAL(5,2) DEFAULT 10.00,
+      weight DECIMAL(3,2) DEFAULT 1.00,
+      course_id INTEGER REFERENCES courses(id),
+      created_by INTEGER REFERENCES users(id),
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
 
-    // Crear usuario administrador
-    console.log('👤 Creando usuario administrador...');
-    
-    const adminUser = await sql`
-      INSERT INTO users (
-        institute_id,
-        email,
-        display_name,
-        first_name,
-        last_name,
-        role,
-        password_hash,
-        is_active,
-        preferences
-      ) VALUES (
-        ${instituteId},
-        'admin@gei.adeptify.es',
-        'Administrador GEI',
-        'Admin',
-        'GEI',
-        'super_admin',
-        ${passwordHash},
-        true,
-        '{"theme": "light", "language": "es"}'
-      )
-      RETURNING id, email, display_name, role;
-    `;
+  // Tabla de calificaciones
+  await sql`
+    CREATE TABLE IF NOT EXISTS grades (
+      id SERIAL PRIMARY KEY,
+      student_id INTEGER REFERENCES users(id),
+      evaluation_id INTEGER REFERENCES evaluations(id),
+      criterion_id INTEGER REFERENCES criteria(id),
+      score DECIMAL(5,2) NOT NULL,
+      comments TEXT,
+      graded_by INTEGER REFERENCES users(id),
+      graded_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(student_id, evaluation_id, criterion_id)
+    )
+  `;
 
-    console.log('✅ Usuario administrador creado exitosamente!');
-    console.log(`   ID: ${adminUser[0].id}`);
-    console.log(`   Email: ${adminUser[0].email}`);
-    console.log(`   Nombre: ${adminUser[0].display_name}`);
-    console.log(`   Rol: ${adminUser[0].role}`);
+  // Tabla de asistencia
+  await sql`
+    CREATE TABLE IF NOT EXISTS attendance (
+      id SERIAL PRIMARY KEY,
+      student_id INTEGER REFERENCES users(id),
+      course_id INTEGER REFERENCES courses(id),
+      date DATE NOT NULL,
+      status VARCHAR(50) NOT NULL DEFAULT 'presente',
+      comments TEXT,
+      recorded_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(student_id, course_id, date)
+    )
+  `;
 
-    // Crear usuarios adicionales para testing
-    console.log('\n👥 Creando usuarios adicionales para testing...');
+  // Tabla de inscripciones
+  await sql`
+    CREATE TABLE IF NOT EXISTS enrollments (
+      id SERIAL PRIMARY KEY,
+      student_id INTEGER REFERENCES users(id),
+      course_id INTEGER REFERENCES courses(id),
+      enrollment_date DATE DEFAULT CURRENT_DATE,
+      status VARCHAR(50) DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(student_id, course_id)
+    )
+  `;
 
-    const testUsers = [
-      {
-        email: 'teacher@gei.adeptify.es',
-        display_name: 'Profesor Demo',
-        first_name: 'Profesor',
-        last_name: 'Demo',
-        role: 'teacher',
-        password: 'teacher123'
-      },
-      {
-        email: 'student@gei.adeptify.es',
-        display_name: 'Estudiante Demo',
-        first_name: 'Estudiante',
-        last_name: 'Demo',
-        role: 'student',
-        password: 'student123'
-      },
-      {
-        email: 'parent@gei.adeptify.es',
-        display_name: 'Padre Demo',
-        first_name: 'Padre',
-        last_name: 'Demo',
-        role: 'parent',
-        password: 'parent123'
-      }
-    ];
+  console.log('✅ Tablas creadas correctamente');
 
-    for (const userData of testUsers) {
-      const userPasswordHash = await bcrypt.hash(userData.password, saltRounds);
-      
-      await sql`
-        INSERT INTO users (
-          institute_id,
-          email,
-          display_name,
-          first_name,
-          last_name,
-          role,
-          password_hash,
-          is_active,
-          preferences
-        ) VALUES (
-          ${instituteId},
-          ${userData.email},
-          ${userData.display_name},
-          ${userData.first_name},
-          ${userData.last_name},
-          ${userData.role},
-          ${userPasswordHash},
-          true,
-          '{"theme": "light", "language": "es"}'
-        )
-        ON CONFLICT (email) DO NOTHING;
-      `;
-      
-      console.log(`✅ Usuario ${userData.role} creado: ${userData.email}`);
-    }
+  // Crear instituto por defecto
+  console.log('🏫 Creando instituto por defecto...');
+  const institute = await sql`
+    INSERT INTO institutes (name, code, email, website)
+    VALUES ('GEI Institute', 'GEI001', 'info@gei.edu', 'https://gei.edu')
+    ON CONFLICT (code) DO UPDATE SET 
+      name = EXCLUDED.name,
+      email = EXCLUDED.email,
+      website = EXCLUDED.website
+    RETURNING id, name, code
+  `;
 
-    // Cerrar conexión
+  console.log(`✅ Instituto creado: ${institute[0].name} (${institute[0].code})`);
+
+  // Crear usuario administrador
+  console.log('👤 Creando usuario administrador...');
+  
+  const adminPassword = 'admin123'; // Contraseña por defecto
+  const hashedPassword = await bcrypt.hash(adminPassword, 12);
+  
+  const adminUser = await sql`
+    INSERT INTO users (email, display_name, first_name, last_name, role, password_hash, institute_id)
+    VALUES (
+      'admin@gei.edu',
+      'Administrador GEI',
+      'Admin',
+      'GEI',
+      'admin',
+      ${hashedPassword},
+      ${institute[0].id}
+    )
+    ON CONFLICT (email) DO UPDATE SET 
+      display_name = EXCLUDED.display_name,
+      first_name = EXCLUDED.first_name,
+      last_name = EXCLUDED.last_name,
+      role = EXCLUDED.role,
+      password_hash = EXCLUDED.password_hash,
+      institute_id = EXCLUDED.institute_id
+    RETURNING id, email, display_name, role
+  `;
+
+  console.log(`✅ Usuario administrador creado: ${adminUser[0].display_name} (${adminUser[0].email})`);
+
+  // Crear usuario profesor de ejemplo
+  console.log('👨‍🏫 Creando usuario profesor...');
+  
+  const teacherPassword = 'teacher123';
+  const hashedTeacherPassword = await bcrypt.hash(teacherPassword, 12);
+  
+  const teacherUser = await sql`
+    INSERT INTO users (email, display_name, first_name, last_name, role, password_hash, institute_id)
+    VALUES (
+      'teacher@gei.edu',
+      'Profesor Ejemplo',
+      'Profesor',
+      'Ejemplo',
+      'teacher',
+      ${hashedTeacherPassword},
+      ${institute[0].id}
+    )
+    ON CONFLICT (email) DO UPDATE SET 
+      display_name = EXCLUDED.display_name,
+      first_name = EXCLUDED.first_name,
+      last_name = EXCLUDED.last_name,
+      role = EXCLUDED.role,
+      password_hash = EXCLUDED.password_hash,
+      institute_id = EXCLUDED.institute_id
+    RETURNING id, email, display_name, role
+  `;
+
+  console.log(`✅ Usuario profesor creado: ${teacherUser[0].display_name} (${teacherUser[0].email})`);
+
+  // Crear usuario estudiante de ejemplo
+  console.log('👨‍🎓 Creando usuario estudiante...');
+  
+  const studentPassword = 'student123';
+  const hashedStudentPassword = await bcrypt.hash(studentPassword, 12);
+  
+  const studentUser = await sql`
+    INSERT INTO users (email, display_name, first_name, last_name, role, password_hash, institute_id)
+    VALUES (
+      'student@gei.edu',
+      'Estudiante Ejemplo',
+      'Estudiante',
+      'Ejemplo',
+      'student',
+      ${hashedStudentPassword},
+      ${institute[0].id}
+    )
+    ON CONFLICT (email) DO UPDATE SET 
+      display_name = EXCLUDED.display_name,
+      first_name = EXCLUDED.first_name,
+      last_name = EXCLUDED.last_name,
+      role = EXCLUDED.role,
+      password_hash = EXCLUDED.password_hash,
+      institute_id = EXCLUDED.institute_id
+    RETURNING id, email, display_name, role
+  `;
+
+  console.log(`✅ Usuario estudiante creado: ${studentUser[0].display_name} (${studentUser[0].email})`);
+
+  // Crear curso de ejemplo
+  console.log('📚 Creando curso de ejemplo...');
+  
+  const course = await sql`
+    INSERT INTO courses (name, code, description, academic_year, semester, credits, institute_id)
+    VALUES (
+      'Matemáticas Avanzadas',
+      'MATH101',
+      'Curso de matemáticas para estudiantes avanzados',
+      2025,
+      1,
+      6,
+      ${institute[0].id}
+    )
+    ON CONFLICT (code) DO UPDATE SET 
+      name = EXCLUDED.name,
+      description = EXCLUDED.description,
+      academic_year = EXCLUDED.academic_year,
+      semester = EXCLUDED.semester,
+      credits = EXCLUDED.credits,
+      institute_id = EXCLUDED.institute_id
+    RETURNING id, name, code
+  `;
+
+  console.log(`✅ Curso creado: ${course[0].name} (${course[0].code})`);
+
+  // Inscribir estudiante en el curso
+  await sql`
+    INSERT INTO enrollments (student_id, course_id)
+    VALUES (${studentUser[0].id}, ${course[0].id})
+    ON CONFLICT (student_id, course_id) DO NOTHING
+  `;
+
+  console.log(`✅ Estudiante inscrito en el curso`);
+
+  console.log('\n🎉 === USUARIOS CREADOS EXITOSAMENTE ===');
+  console.log('\n📋 Credenciales de acceso:');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('👤 ADMINISTRADOR:');
+  console.log(`   Email: admin@gei.edu`);
+  console.log(`   Contraseña: ${adminPassword}`);
+  console.log(`   Rol: admin`);
+  console.log('');
+  console.log('👨‍🏫 PROFESOR:');
+  console.log(`   Email: teacher@gei.edu`);
+  console.log(`   Contraseña: ${teacherPassword}`);
+  console.log(`   Rol: teacher`);
+  console.log('');
+  console.log('👨‍🎓 ESTUDIANTE:');
+  console.log(`   Email: student@gei.edu`);
+  console.log(`   Contraseña: ${studentPassword}`);
+  console.log(`   Rol: student`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('\n🌐 Accede a: http://localhost:3000');
+  console.log('🔐 Usa las credenciales del administrador para acceder');
+
+} catch (error) {
+  console.error('❌ Error:', error.message);
+  console.error(error.stack);
+} finally {
+  if (sql) {
     await sql.end();
-    
-    console.log('\n🎉 USUARIOS CREADOS EXITOSAMENTE');
-    console.log('================================');
-    console.log('\n📋 CREDENCIALES PARA LOGIN:');
-    console.log('============================');
-    console.log('👑 Administrador:');
-    console.log('   Email: admin@gei.adeptify.es');
-    console.log('   Contraseña: admin123');
-    console.log('   Rol: super_admin');
-    console.log('');
-    console.log('👨‍🏫 Profesor:');
-    console.log('   Email: teacher@gei.adeptify.es');
-    console.log('   Contraseña: teacher123');
-    console.log('   Rol: teacher');
-    console.log('');
-    console.log('👨‍🎓 Estudiante:');
-    console.log('   Email: student@gei.adeptify.es');
-    console.log('   Contraseña: student123');
-    console.log('   Rol: student');
-    console.log('');
-    console.log('👨‍👩‍👧‍👦 Padre:');
-    console.log('   Email: parent@gei.adeptify.es');
-    console.log('   Contraseña: parent123');
-    console.log('   Rol: parent');
-    console.log('');
-    console.log('🚀 Ahora puedes hacer login en la aplicación!');
-    
-  } catch (error) {
-    console.error('\n❌ ERROR AL CREAR USUARIO ADMINISTRADOR:');
-    console.error('=========================================');
-    console.error(error.message);
-    
-    if (error.message.includes('La tabla users no existe')) {
-      console.error('\n💡 EJECUTA PRIMERO:');
-      console.error('==================');
-      console.error('npm run db:create-tables');
-      console.error('npm run db:init-simple');
-    }
-    
-    process.exit(1);
   }
-}
-
-// Ejecutar el script
-createAdminUser(); 
+  console.log('\n✅ Script completado');
+} 
