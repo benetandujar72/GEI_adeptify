@@ -9,7 +9,7 @@ const router = Router();
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://gei_user:gei_password@localhost:5432/gei_unified';
 const sql = postgres(DATABASE_URL, { 
   max: 10,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: false // Deshabilitar SSL para desarrollo local
 });
 
 // TEMPORAL: Almacén de sesiones en memoria
